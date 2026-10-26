@@ -164,6 +164,10 @@
     vertical-align: 1px;
   }
   .pill.new { background: var(--brand); color: var(--onbrand); }
+  .pill.mode { background: transparent; color: var(--brand-text); box-shadow: inset 0 0 0 1px var(--brand-text); }
+
+  .t-spacers th:first-child, .t-spacers td:first-child { width: auto; }
+  .hint { margin: 4px 0 0; color: var(--text2); }
 
   input[type="checkbox"] {
     margin: 0;
@@ -219,12 +223,16 @@
   <section>
     <div class="grid2">
       <label class="field"><span>Mode</span><select id="mode"></select></label>
+      <div class="segmented" id="tabs" role="group" aria-label="Section">
+        <button data-tab="grid" aria-pressed="true">Grid</button>
+        <button data-tab="spacers" aria-pressed="false">Spacers</button>
+      </div>
       <label class="field" id="collectionField" hidden><span>Set</span><select id="collection"></select></label>
     </div>
   </section>
 
+  <div id="tab-grid">
   <section>
-    <h2>Grid</h2>
     <div class="grid2">
       <label class="field" title="Container width (grid/col/col-12)"><span>col-12</span><input id="W" type="number" step="1" min="1"></label>
       <label class="field" title="grid/gutter"><span>Gutter</span><input id="g" type="number" step="1" min="0"></label>
@@ -232,7 +240,7 @@
       <label class="field" title="Used for grid/margin/margin = (page width − col-12) / 2"><span>Page</span><input id="P" type="number" step="1" min="1"></label>
     </div>
     <div class="row" style="margin-top:8px">
-      <div class="segmented" role="group" aria-label="Rounding">
+      <div class="segmented" id="rounding" role="group" aria-label="Rounding">
         <button data-r="nearest" aria-pressed="true">Round</button>
         <button data-r="floor" aria-pressed="false">Floor</button>
         <button data-r="none" aria-pressed="false">Off (0.01)</button>
@@ -252,6 +260,26 @@
     </thead>
     <tbody id="rows"></tbody>
   </table>
+  </div>
+
+  <div id="tab-spacers" hidden>
+    <section>
+      <p class="summary" id="spacerSummary" style="margin:0"></p>
+      <p class="hint" id="spacerHint"></p>
+    </section>
+    <table class="t-spacers">
+      <thead>
+        <tr>
+          <th>Spacer</th>
+          <th class="num">Value</th>
+          <th class="num">Negative</th>
+          <th class="num">New</th>
+        </tr>
+      </thead>
+      <tbody id="spacerRows"></tbody>
+    </table>
+  </div>
+
   <div id="empty" class="empty" hidden>Loading variables…</div>
 </main>
 
@@ -267,6 +295,8 @@
   var overrides = {};   // variable name -> checked, set by the user
   var busy = false;
   var currentRows = [];
+  var tab = 'grid';
+  var spacerCount = 0;  // negative spacer variables that need creating or fixing
 
   function post(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
 
@@ -283,6 +313,7 @@
     var col = (W - (C - 1) * g) / C;
     return n * col + (n - 1) * g;
   }
+  function negate(v) { return v === 0 ? 0 : -v; }
 
   function fmt(n) {
     if (n === null || n === undefined || isNaN(n)) return '—';
@@ -348,17 +379,25 @@
     return rows;
   }
 
+  function modeName() {
+    return (data.modes.filter(function (m) { return m.modeId === data.modeId; })[0] || {}).name || '';
+  }
+
   function render() {
     if (!data) return;
+    renderGrid();
+    renderSpacers();
+    updateButton();
+  }
+
+  function renderGrid() {
     var W = num('W'), g = num('g'), C = num('C'), P = num('P');
     var err = validate(W, g, C, P);
-    var modeName = (data.modes.filter(function (m) { return m.modeId === data.modeId; })[0] || {}).name || '';
 
     if (err) {
       $('summary').innerHTML = '<span class="invalid">' + err + '</span>';
       $('rows').innerHTML = '';
       currentRows = [];
-      updateButton(modeName);
       return;
     }
 
@@ -388,21 +427,84 @@
     $('all').disabled = enabled.length === 0;
     $('all').checked = enabled.length > 0 && checked.length === enabled.length;
     $('all').indeterminate = checked.length > 0 && checked.length < enabled.length;
+  }
 
-    updateButton(modeName);
+  // Negative spacers: preview for the selected mode, count across all modes.
+  function renderSpacers() {
+    var list = data.spacers || [];
+    spacerCount = 0;
+    if (!list.length) {
+      $('spacerSummary').textContent = 'No variables named spacers/<n> found in this collection.';
+      $('spacerHint').textContent = '';
+      $('spacerRows').innerHTML = '';
+      return;
+    }
+
+    var toCreate = 0, toUpdate = 0;
+    $('spacerRows').innerHTML = list.map(function (s) {
+      var cur = s.modes[data.modeId] || { pos: null, neg: null, negIsAlias: false };
+      var target = cur.pos === null ? null : negate(cur.pos);
+
+      var outOfSync = data.modes.filter(function (m) {
+        var v = s.modes[m.modeId];
+        if (!v || v.pos === null || v.negIsAlias) return false;
+        return !s.negId || v.neg === null || Math.abs(v.neg - negate(v.pos)) > 0.0005;
+      });
+      if (!s.negId) toCreate++;
+      else if (outOfSync.length) toUpdate++;
+
+      var status;
+      if (!s.negId) status = 'new';
+      else if (!cur.negIsAlias && target !== null && (cur.neg === null || Math.abs(cur.neg - target) > 0.0005)) status = 'changed';
+      else status = 'same';
+
+      var pills = '';
+      if (status === 'new') pills += '<span class="pill new">new</span>';
+      if (cur.negIsAlias) pills += '<span class="pill" title="Aliased values are left alone">alias</span>';
+      if (s.negId) outOfSync.forEach(function (m) {
+        if (m.modeId !== data.modeId) pills += '<span class="pill mode" title="Out of sync in ' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</span>';
+      });
+
+      return '<tr class="' + status + '">' +
+        '<td class="name" title="' + escapeHtml(s.negName) + '">' + escapeHtml(s.key) + pills + '</td>' +
+        '<td class="num">' + fmt(cur.pos) + '</td>' +
+        '<td class="num">' + (s.negId ? fmt(cur.neg) : '—') + '</td>' +
+        '<td class="num next">' + (cur.negIsAlias ? '' : fmt(target)) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    spacerCount = toCreate + toUpdate;
+    var parts = [list.length + ' spacers'];
+    if (toCreate) parts.push('<b>' + toCreate + '</b> to create');
+    if (toUpdate) parts.push('<b>' + toUpdate + '</b> to update');
+    if (!spacerCount) parts.push('negatives in sync');
+    $('spacerSummary').innerHTML = parts.join(' · ');
+    $('spacerHint').textContent = 'Sets negative/<n> to −<n> in ' +
+      data.modes.map(function (m) { return m.name; }).join(' and ') + '. Missing ones are created.';
   }
 
   function selectedItems() {
     return currentRows.filter(function (r) { return r.enabled && r.checked; });
   }
 
-  function updateButton(modeName) {
-    var count = selectedItems().length;
+  function updateButton() {
     var btn = $('apply');
-    btn.disabled = busy || count === 0;
-    if (busy) btn.textContent = 'Updating…';
-    else if (count === 0) btn.textContent = 'No changes in ' + modeName;
-    else btn.textContent = 'Update ' + count + ' variable' + (count === 1 ? '' : 's') + ' in ' + modeName;
+    if (busy) { btn.disabled = true; btn.textContent = 'Updating…'; return; }
+    if (!data) { btn.disabled = true; return; }
+
+    if (tab === 'spacers') {
+      btn.disabled = spacerCount === 0;
+      btn.textContent = spacerCount === 0
+        ? 'Negative spacers in sync'
+        : 'Sync ' + spacerCount + ' negative spacer' + (spacerCount === 1 ? '' : 's') + ' (all modes)';
+      return;
+    }
+
+    var count = selectedItems().length;
+    btn.disabled = count === 0;
+    btn.textContent = count === 0
+      ? 'No changes in ' + modeName()
+      : 'Update ' + count + ' variable' + (count === 1 ? '' : 's') + ' in ' + modeName();
   }
 
   function escapeHtml(s) {
@@ -416,13 +518,25 @@
   // ---------- events ----------
   ['W', 'g', 'C', 'P'].forEach(function (id) { $(id).addEventListener('input', render); });
 
-  document.querySelectorAll('.segmented button').forEach(function (b) {
+  document.querySelectorAll('#rounding button').forEach(function (b) {
     b.addEventListener('click', function () {
       rounding = b.getAttribute('data-r');
-      document.querySelectorAll('.segmented button').forEach(function (x) {
+      document.querySelectorAll('#rounding button').forEach(function (x) {
         x.setAttribute('aria-pressed', String(x === b));
       });
       render();
+    });
+  });
+
+  document.querySelectorAll('#tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      tab = b.getAttribute('data-tab');
+      document.querySelectorAll('#tabs button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      $('tab-grid').hidden = tab !== 'grid';
+      $('tab-spacers').hidden = tab !== 'spacers';
+      updateButton();
     });
   });
 
@@ -449,12 +563,19 @@
   });
 
   $('apply').addEventListener('click', function () {
+    if (tab === 'spacers') {
+      if (!spacerCount) return;
+      busy = true;
+      updateButton();
+      post({ type: 'syncNegatives', collectionId: data.collectionId, modeId: data.modeId });
+      return;
+    }
     var items = selectedItems().map(function (r) {
       return { name: r.name, id: r.id, n: r.n, value: r.next };
     });
     if (!items.length) return;
     busy = true;
-    updateButton('');
+    updateButton();
     post({ type: 'apply', collectionId: data.collectionId, modeId: data.modeId, rounding: rounding, items: items });
   });
 

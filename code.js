@@ -1,6 +1,7 @@
 // Grid Columns
-// Reads the grid variables for one mode, lets the UI calculate col-1 … col-12,
-// and writes the chosen values back to that mode only.
+// Grid tab: reads the grid variables for one mode, lets the UI calculate
+// col-1 … col-12, and writes the chosen values back to that mode only.
+// Spacers tab: mirrors spacers/N into spacers/negative/N for every mode.
 
 // Variable names. Change these if your naming differs.
 var CONFIG = {
@@ -12,7 +13,9 @@ var CONFIG = {
   pageWidth: 'grid/page/width',
   colPrefix: 'grid/col/col-',
   maxCols: 12,
-  fallbackPageWidth: 1920
+  fallbackPageWidth: 1920,
+  spacerPrefix: 'spacers/',           // spacers/1 … spacers/15
+  negativePrefix: 'spacers/negative/' // spacers/negative/1 …
 };
 
 var BASE_KEYS = ['col12', 'columns', 'gutter', 'gutterNegative', 'margin', 'pageWidth'];
@@ -106,6 +109,49 @@ async function readMode(byName, modeId) {
   return { base: base, cols: cols };
 }
 
+// ---------- spacers ----------
+
+function negate(v) {
+  return v === 0 ? 0 : -v;
+}
+
+// Positive spacers are direct children of spacerPrefix (spacers/1, spacers/2 …).
+// Their negative counterpart lives at negativePrefix + the same key.
+function findSpacers(byName) {
+  var list = [];
+  Object.keys(byName).forEach(function (name) {
+    if (name.indexOf(CONFIG.spacerPrefix) !== 0) return;
+    var key = name.slice(CONFIG.spacerPrefix.length);
+    if (!key || key.indexOf('/') !== -1) return;
+    list.push({ key: key, pos: byName[name], neg: byName[CONFIG.negativePrefix + key] || null });
+  });
+  list.sort(function (a, b) {
+    var na = parseFloat(a.key), nb = parseFloat(b.key);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  });
+  return list;
+}
+
+async function readSpacers(byName, modes) {
+  var list = findSpacers(byName);
+  var out = [];
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i];
+    var row = { key: s.key, posName: s.pos.name, negName: CONFIG.negativePrefix + s.key, negId: s.neg ? s.neg.id : null, modes: {} };
+    for (var m = 0; m < modes.length; m++) {
+      var modeId = modes[m].modeId;
+      row.modes[modeId] = {
+        pos: await resolveValue(s.pos, modeId, 0),
+        neg: s.neg ? await resolveValue(s.neg, modeId, 0) : null,
+        negIsAlias: s.neg ? isAlias(s.neg.valuesByMode[modeId]) : false
+      };
+    }
+    out.push(row);
+  }
+  return out;
+}
+
 async function load(collectionId, modeId) {
   var found = await getGridCollections();
   if (!found.collections.length) {
@@ -120,7 +166,9 @@ async function load(collectionId, modeId) {
   var mode = collection.modes.filter(function (m) { return m.modeId === modeId; })[0] ||
     collection.modes.filter(function (m) { return m.modeId === collection.defaultModeId; })[0];
 
-  var data = await readMode(indexByName(found.vars, collection.id), mode.modeId);
+  var byName = indexByName(found.vars, collection.id);
+  var data = await readMode(byName, mode.modeId);
+  var spacers = await readSpacers(byName, collection.modes);
 
   figma.ui.postMessage({
     type: 'data',
@@ -130,7 +178,8 @@ async function load(collectionId, modeId) {
     modeId: mode.modeId,
     fallbackPageWidth: CONFIG.fallbackPageWidth,
     base: data.base,
-    cols: data.cols
+    cols: data.cols,
+    spacers: spacers
   });
 
   await figma.clientStorage.setAsync('last', { collectionId: collection.id, modeId: mode.modeId });
@@ -200,6 +249,58 @@ async function apply(msg) {
   await load(collection.id, msg.modeId);
 }
 
+// Sets spacers/negative/N = −spacers/N in every mode. Creates missing negatives
+// (scopes copied from the positive spacer). Aliased negative values are left alone.
+async function syncNegatives(msg) {
+  var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
+  if (!collection) throw new Error('Collection not found.');
+
+  var vars = await figma.variables.getLocalVariablesAsync('FLOAT');
+  var list = findSpacers(indexByName(vars, collection.id));
+  var created = 0;
+  var updated = 0;
+  var skipped = 0;
+
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i];
+    var neg = s.neg;
+    var isNew = !neg;
+    var changed = false;
+
+    if (isNew) {
+      neg = figma.variables.createVariable(CONFIG.negativePrefix + s.key, collection, 'FLOAT');
+      neg.scopes = s.pos.scopes.slice();
+    }
+
+    for (var m = 0; m < collection.modes.length; m++) {
+      var modeId = collection.modes[m].modeId;
+      var pos = await resolveValue(s.pos, modeId, 0);
+      if (typeof pos !== 'number') continue;
+      var target = negate(pos);
+      if (!isNew) {
+        var raw = neg.valuesByMode[modeId];
+        if (isAlias(raw)) { skipped++; continue; }
+        if (typeof raw === 'number' && Math.abs(raw - target) < 0.0005) continue;
+      }
+      neg.setValueForMode(modeId, target);
+      changed = true;
+    }
+
+    if (isNew) created++;
+    else if (changed) updated++;
+  }
+
+  figma.commitUndo();
+
+  var parts = [];
+  if (created) parts.push('created ' + created);
+  if (updated) parts.push('updated ' + updated);
+  if (skipped) parts.push('skipped ' + skipped + ' aliased value' + (skipped === 1 ? '' : 's'));
+  figma.notify(parts.length ? 'Negative spacers: ' + parts.join(', ') : 'Negative spacers already in sync');
+
+  await load(collection.id, msg.modeId);
+}
+
 // ---------- messages ----------
 
 figma.ui.onmessage = async function (msg) {
@@ -211,6 +312,7 @@ figma.ui.onmessage = async function (msg) {
     }
     else if (msg.type === 'load') await load(msg.collectionId, msg.modeId);
     else if (msg.type === 'apply') await apply(msg);
+    else if (msg.type === 'syncNegatives') await syncNegatives(msg);
     else if (msg.type === 'close') figma.closePlugin();
   } catch (e) {
     figma.ui.postMessage({ type: 'error', message: String(e && e.message ? e.message : e) });
