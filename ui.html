@@ -241,8 +241,8 @@
     </div>
     <div class="row" style="margin-top:8px">
       <div class="segmented" id="rounding" role="group" aria-label="Rounding">
-        <button data-r="nearest" aria-pressed="true">Round</button>
-        <button data-r="floor" aria-pressed="false">Floor</button>
+        <button data-r="nearest" aria-pressed="false">Round</button>
+        <button data-r="floor" aria-pressed="true">Floor</button>
         <button data-r="none" aria-pressed="false">Off (0.01)</button>
       </div>
     </div>
@@ -291,7 +291,7 @@
 <script>
   var $ = function (id) { return document.getElementById(id); };
   var data = null;
-  var rounding = 'nearest';
+  var rounding = 'floor';
   var overrides = {};   // variable name -> checked, set by the user
   var busy = false;
   var currentRows = [];

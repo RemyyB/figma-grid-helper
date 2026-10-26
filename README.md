@@ -21,7 +21,7 @@ margin    = (page width − col-12) / 2
 gutter-negative = −gutter
 ```
 
-Rounding: Round (nearest px), Floor (stacked spans never exceed col-12) or Off (2 decimals).
+Rounding: Floor (default; stacked spans never exceed col-12), Round (nearest px) or Off (2 decimals).
 
 ## Notes
 
