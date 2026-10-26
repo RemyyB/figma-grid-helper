@@ -1,26 +1,65 @@
-// Grid Columns
+// Grid Helper
 // Grid tab: reads the grid variables for one mode, lets the UI calculate
 // col-1 … col-12, and writes the chosen values back to that mode only.
 // Spacers tab: mirrors spacers/N into spacers/negative/N for every mode.
+// Settings: variable names are configurable per file (stored in the file).
+// Empty files: creates a starter set of grid and spacer variables.
 
-// Variable names. Change these if your naming differs.
-var CONFIG = {
-  col12: 'grid/col/col-12',
+var MAX_COLS = 12;
+var FALLBACK_PAGE_WIDTH = 1920;
+
+// Default variable names. Users can change them in Settings.
+var DEFAULT_NAMES = {
+  colPrefix: 'grid/col/col-',          // col-1 … col-12; col-12 is the container width
   columns: 'grid/col/columns',
   gutter: 'grid/gutter',
   gutterNegative: 'grid/gutter-negative',
   margin: 'grid/margin/margin',
   pageWidth: 'grid/page/width',
-  colPrefix: 'grid/col/col-',
-  maxCols: 12,
-  fallbackPageWidth: 1920,
-  spacerPrefix: 'spacers/',           // spacers/1 … spacers/15
-  negativePrefix: 'spacers/negative/' // spacers/negative/1 …
+  spacerPrefix: 'spacers/',            // spacers/1 … spacers/15
+  negativePrefix: 'spacers/negative/'  // spacers/negative/1 …
 };
+
+var NAMES = Object.assign({}, DEFAULT_NAMES);
 
 var BASE_KEYS = ['col12', 'columns', 'gutter', 'gutterNegative', 'margin', 'pageWidth'];
 
 figma.showUI(__html__, { width: 380, height: 720, themeColors: true });
+
+// ---------- settings ----------
+
+function col12Name() {
+  return NAMES.colPrefix + MAX_COLS;
+}
+
+function baseName(key) {
+  return key === 'col12' ? col12Name() : NAMES[key];
+}
+
+// Names are stored in the file, so everyone running the plugin there shares them.
+function loadNames() {
+  NAMES = Object.assign({}, DEFAULT_NAMES);
+  var raw = figma.root.getPluginData('names');
+  if (!raw) return;
+  try {
+    var saved = JSON.parse(raw);
+    Object.keys(DEFAULT_NAMES).forEach(function (k) {
+      if (typeof saved[k] === 'string' && saved[k].trim()) NAMES[k] = saved[k].trim();
+    });
+  } catch (e) {
+    // Ignore unreadable settings and fall back to the defaults.
+  }
+}
+
+function saveNames(names) {
+  var clean = {};
+  Object.keys(DEFAULT_NAMES).forEach(function (k) {
+    var v = names && typeof names[k] === 'string' ? names[k].trim() : '';
+    if (v && v !== DEFAULT_NAMES[k]) clean[k] = v;
+  });
+  figma.root.setPluginData('names', Object.keys(clean).length ? JSON.stringify(clean) : '');
+  loadNames();
+}
 
 // ---------- math (same as in ui.html) ----------
 
@@ -40,6 +79,10 @@ function spanWidth(n, W, gutter, columns) {
   if (n >= columns) return W;
   var col = (W - (columns - 1) * gutter) / columns;
   return n * col + (n - 1) * gutter;
+}
+
+function negate(v) {
+  return v === 0 ? 0 : -v;
 }
 
 // ---------- reading ----------
@@ -66,7 +109,7 @@ async function resolveValue(variable, modeId, depth) {
 
 // Names an alias points through (nearest first), within the same collection.
 // The UI uses this to let an aliased variable follow a value you're editing,
-// e.g. margin → grid/gutter.
+// e.g. margin → gutter.
 async function aliasPath(variable, modeId) {
   var path = [];
   var v = variable;
@@ -106,10 +149,31 @@ async function getGridCollections() {
   var vars = await figma.variables.getLocalVariablesAsync('FLOAT');
   var withGrid = collections.filter(function (c) {
     return vars.some(function (v) {
-      return v.variableCollectionId === c.id && v.name === CONFIG.col12;
+      return v.variableCollectionId === c.id && v.name === col12Name();
     });
   });
-  return { collections: withGrid, vars: vars };
+  return { all: collections, collections: withGrid, vars: vars };
+}
+
+// All local number variables, for the pickers in Settings. Values come from
+// each collection's default mode; aliases are flagged instead of resolved.
+function variableList(collections, vars) {
+  var byId = {};
+  collections.forEach(function (c) { byId[c.id] = c; });
+  var list = [];
+  vars.forEach(function (v) {
+    var c = byId[v.variableCollectionId];
+    if (!c) return;
+    var raw = v.valuesByMode[c.defaultModeId];
+    list.push({
+      name: v.name,
+      cid: c.id,
+      cname: c.name,
+      value: typeof raw === 'number' ? raw : null,
+      alias: isAlias(raw)
+    });
+  });
+  return list;
 }
 
 function indexByName(vars, collectionId) {
@@ -124,11 +188,11 @@ async function readMode(byName, modeId) {
   var base = {};
   for (var i = 0; i < BASE_KEYS.length; i++) {
     var key = BASE_KEYS[i];
-    base[key] = await readVar(byName, CONFIG[key], modeId);
+    base[key] = await readVar(byName, baseName(key), modeId);
   }
   var cols = [];
-  for (var n = 1; n <= CONFIG.maxCols; n++) {
-    var col = await readVar(byName, CONFIG.colPrefix + n, modeId);
+  for (var n = 1; n <= MAX_COLS; n++) {
+    var col = await readVar(byName, NAMES.colPrefix + n, modeId);
     col.n = n;
     cols.push(col);
   }
@@ -137,19 +201,16 @@ async function readMode(byName, modeId) {
 
 // ---------- spacers ----------
 
-function negate(v) {
-  return v === 0 ? 0 : -v;
-}
-
 // Positive spacers are direct children of spacerPrefix (spacers/1, spacers/2 …).
 // Their negative counterpart lives at negativePrefix + the same key.
 function findSpacers(byName) {
   var list = [];
   Object.keys(byName).forEach(function (name) {
-    if (name.indexOf(CONFIG.spacerPrefix) !== 0) return;
-    var key = name.slice(CONFIG.spacerPrefix.length);
+    if (name.indexOf(NAMES.spacerPrefix) !== 0) return;
+    var key = name.slice(NAMES.spacerPrefix.length);
     if (!key || key.indexOf('/') !== -1) return;
-    list.push({ key: key, pos: byName[name], neg: byName[CONFIG.negativePrefix + key] || null });
+    if (name.indexOf(NAMES.negativePrefix) === 0) return; // e.g. spacers/neg-1
+    list.push({ key: key, pos: byName[name], neg: byName[NAMES.negativePrefix + key] || null });
   });
   list.sort(function (a, b) {
     var na = parseFloat(a.key), nb = parseFloat(b.key);
@@ -164,7 +225,7 @@ async function readSpacers(byName, modes) {
   var out = [];
   for (var i = 0; i < list.length; i++) {
     var s = list[i];
-    var row = { key: s.key, posName: s.pos.name, negName: CONFIG.negativePrefix + s.key, negId: s.neg ? s.neg.id : null, modes: {} };
+    var row = { key: s.key, posName: s.pos.name, negName: NAMES.negativePrefix + s.key, negId: s.neg ? s.neg.id : null, modes: {} };
     for (var m = 0; m < modes.length; m++) {
       var modeId = modes[m].modeId;
       row.modes[modeId] = {
@@ -178,12 +239,23 @@ async function readSpacers(byName, modes) {
   return out;
 }
 
-async function load(collectionId, modeId) {
+// ---------- load ----------
+
+// quiet: reload in the background (from Settings) without switching screens.
+async function load(collectionId, modeId, quiet) {
+  loadNames();
   var found = await getGridCollections();
+
+  // Nothing to work with yet: offer to create a starter set.
   if (!found.collections.length) {
     figma.ui.postMessage({
-      type: 'error',
-      message: 'No local variable named "' + CONFIG.col12 + '" found in this file.'
+      type: 'empty',
+      names: NAMES,
+      defaults: DEFAULT_NAMES,
+      col12Name: col12Name(),
+      collections: found.all.map(function (c) { return { id: c.id, name: c.name }; }),
+      variables: variableList(found.all, found.vars),
+      quiet: !!quiet
     });
     return;
   }
@@ -198,14 +270,18 @@ async function load(collectionId, modeId) {
 
   figma.ui.postMessage({
     type: 'data',
+    names: NAMES,
+    defaults: DEFAULT_NAMES,
     collections: found.collections.map(function (c) { return { id: c.id, name: c.name }; }),
     collectionId: collection.id,
     modes: collection.modes.map(function (m) { return { modeId: m.modeId, name: m.name }; }),
     modeId: mode.modeId,
-    fallbackPageWidth: CONFIG.fallbackPageWidth,
+    fallbackPageWidth: FALLBACK_PAGE_WIDTH,
     base: data.base,
     cols: data.cols,
-    spacers: spacers
+    spacers: spacers,
+    variables: variableList(found.all, found.vars),
+    quiet: !!quiet
   });
 
   await figma.clientStorage.setAsync('last', { collectionId: collection.id, modeId: mode.modeId });
@@ -218,18 +294,18 @@ async function load(collectionId, modeId) {
 function valueForOtherMode(n, modeData, rounding) {
   var W = modeData.base.col12.value;
   var g = modeData.base.gutter.value || 0;
-  var C = modeData.base.columns.value || CONFIG.maxCols;
+  var C = modeData.base.columns.value || MAX_COLS;
   if (typeof W !== 'number') return 0;
   return roundValue(spanWidth(n, W, g, C), rounding);
 }
 
 async function apply(msg) {
   var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
-  if (!collection) throw new Error('Collection not found.');
+  if (!collection) throw new Error('The variable collection no longer exists. Reopen the plugin.');
 
   var vars = await figma.variables.getLocalVariablesAsync('FLOAT');
   var byName = indexByName(vars, collection.id);
-  var scopes = byName[CONFIG.col12] ? byName[CONFIG.col12].scopes : ['WIDTH_HEIGHT', 'GAP'];
+  var scopes = byName[col12Name()] ? byName[col12Name()].scopes : ['WIDTH_HEIGHT', 'GAP'];
 
   var otherModes = {};
   var updated = 0;
@@ -284,7 +360,7 @@ async function apply(msg) {
   var parts = [];
   if (updated) parts.push('updated ' + updated);
   if (created) parts.push('created ' + created);
-  figma.notify(parts.length ? 'Grid Columns: ' + parts.join(', ') + ' in ' + modeName : 'Nothing to update');
+  figma.notify(parts.length ? 'Grid Helper: ' + parts.join(', ') + ' in ' + modeName : 'Nothing to update');
 
   await load(collection.id, msg.modeId);
 }
@@ -293,7 +369,7 @@ async function apply(msg) {
 // (scopes copied from the positive spacer). Aliased negative values are left alone.
 async function syncNegatives(msg) {
   var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
-  if (!collection) throw new Error('Collection not found.');
+  if (!collection) throw new Error('The variable collection no longer exists. Reopen the plugin.');
 
   var vars = await figma.variables.getLocalVariablesAsync('FLOAT');
   var list = findSpacers(indexByName(vars, collection.id));
@@ -308,7 +384,7 @@ async function syncNegatives(msg) {
     var changed = false;
 
     if (isNew) {
-      neg = figma.variables.createVariable(CONFIG.negativePrefix + s.key, collection, 'FLOAT');
+      neg = figma.variables.createVariable(NAMES.negativePrefix + s.key, collection, 'FLOAT');
       neg.scopes = s.pos.scopes.slice();
     }
 
@@ -341,7 +417,111 @@ async function syncNegatives(msg) {
   await load(collection.id, msg.modeId);
 }
 
+// ---------- starter set ----------
+
+var STARTER = {
+  desktop: {
+    pageWidth: 1920, columns: 12, col12: 1400, gutter: 32, margin: 260,
+    spacers: [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 72, 84, 100]
+  },
+  mobile: {
+    pageWidth: 393, columns: 6, col12: 361, gutter: 12, margin: 16,
+    spacers: [4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 36, 40, 44, 48]
+  }
+};
+
+function profileFor(modeName) {
+  return /mobile|phone|small|^sm$|^xs$/i.test(modeName) ? STARTER.mobile : STARTER.desktop;
+}
+
+// Ordered list of variables in the starter set, with a value per profile.
+function starterDefinitions() {
+  var defs = [];
+  function add(name, scopes, valueFn) { defs.push({ name: name, scopes: scopes, value: valueFn }); }
+  var size = ['WIDTH_HEIGHT', 'GAP'];
+
+  add(NAMES.pageWidth, size, function (p) { return p.pageWidth; });
+  add(NAMES.columns, ['TEXT_CONTENT'], function (p) { return p.columns; });
+  for (var n = MAX_COLS; n >= 1; n--) {
+    (function (n) {
+      add(NAMES.colPrefix + n, size, function (p) {
+        return roundValue(spanWidth(n, p.col12, p.gutter, p.columns), 'floor');
+      });
+    })(n);
+  }
+  add(NAMES.gutter, size, function (p) { return p.gutter; });
+  add(NAMES.gutterNegative, ['GAP'], function (p) { return negate(p.gutter); });
+  add(NAMES.margin, size, function (p) { return p.margin; });
+  for (var i = 1; i <= 15; i++) {
+    (function (i) {
+      add(NAMES.spacerPrefix + i, size, function (p) { return p.spacers[i - 1]; });
+    })(i);
+  }
+  for (var j = 1; j <= 15; j++) {
+    (function (j) {
+      add(NAMES.negativePrefix + j, ['GAP'], function (p) { return negate(p.spacers[j - 1]); });
+    })(j);
+  }
+  return defs;
+}
+
+async function createStarter(msg) {
+  loadNames();
+  var collection;
+  var notes = [];
+
+  if (msg.target && msg.target !== 'new') {
+    collection = await figma.variables.getVariableCollectionByIdAsync(msg.target);
+    if (!collection) throw new Error('That collection no longer exists. Pick another one.');
+  } else {
+    collection = figma.variables.createVariableCollection('Grid');
+    collection.renameMode(collection.modes[0].modeId, 'Desktop');
+    try {
+      collection.addMode('Mobile');
+    } catch (e) {
+      // Plans with a single mode per collection: keep Desktop only.
+      notes.push('your plan allows one mode, so only Desktop was created');
+    }
+  }
+
+  var vars = await figma.variables.getLocalVariablesAsync('FLOAT');
+  var byName = indexByName(vars, collection.id);
+  var defs = starterDefinitions();
+  var created = 0;
+  var skipped = 0;
+
+  for (var i = 0; i < defs.length; i++) {
+    var def = defs[i];
+    if (byName[def.name]) { skipped++; continue; }
+    var v = figma.variables.createVariable(def.name, collection, 'FLOAT');
+    v.scopes = def.scopes;
+    for (var m = 0; m < collection.modes.length; m++) {
+      var mode = collection.modes[m];
+      v.setValueForMode(mode.modeId, def.value(profileFor(mode.name)));
+    }
+    byName[def.name] = v;
+    created++;
+  }
+
+  figma.commitUndo();
+
+  var text = 'Grid Helper: created ' + created + ' variables in “' + collection.name + '”';
+  if (skipped) text += ', kept ' + skipped + ' that already existed';
+  if (notes.length) text += ' (' + notes.join('; ') + ')';
+  figma.notify(text, { timeout: 6000 });
+
+  await load(collection.id, null);
+}
+
 // ---------- messages ----------
+
+function friendly(e) {
+  var text = String(e && e.message ? e.message : e);
+  if (/read.?only|permission|view.?only|cannot edit/i.test(text)) {
+    return 'This file is view-only for you, so Grid Helper can’t change its variables.';
+  }
+  return 'Something went wrong: ' + text;
+}
 
 figma.ui.onmessage = async function (msg) {
   try {
@@ -350,11 +530,17 @@ figma.ui.onmessage = async function (msg) {
       var last = await figma.clientStorage.getAsync('last');
       await load(last && last.collectionId, last && last.modeId);
     }
-    else if (msg.type === 'load') await load(msg.collectionId, msg.modeId);
+    else if (msg.type === 'load') await load(msg.collectionId, msg.modeId, msg.quiet);
     else if (msg.type === 'apply') await apply(msg);
     else if (msg.type === 'syncNegatives') await syncNegatives(msg);
+    else if (msg.type === 'createStarter') await createStarter(msg);
+    else if (msg.type === 'saveNames') {
+      saveNames(msg.names);
+      figma.notify('Grid Helper: settings saved in this file');
+      await load(msg.collectionId, msg.modeId);
+    }
     else if (msg.type === 'close') figma.closePlugin();
   } catch (e) {
-    figma.ui.postMessage({ type: 'error', message: String(e && e.message ? e.message : e) });
+    figma.ui.postMessage({ type: 'error', message: friendly(e) });
   }
 };

@@ -19,6 +19,7 @@
     --danger: var(--figma-color-text-danger, #dc3412);
     --danger-bg: var(--figma-color-bg-danger-tertiary, #ffe2e0);
     --success: var(--figma-color-text-success, #14ae5c);
+    --warning: var(--figma-color-text-warning, #b86200);
     --disabled-bg: var(--figma-color-bg-disabled, #d9d9d9);
     --disabled-text: var(--figma-color-text-disabled, #b3b3b3);
   }
@@ -240,6 +241,155 @@
   }
 
   .empty { padding: 24px 16px; color: var(--text2); }
+
+  /* Header */
+  .head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px; gap: 8px; align-items: center; }
+  .head > .field#collectionField { grid-column: 1 / 3; }
+  .head-title { grid-column: 1 / 3; font-size: 12px; font-weight: 600; line-height: 28px; }
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+  }
+  .icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+  .icon-btn[aria-pressed="true"] { background: var(--bg2); color: var(--text); }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  /* Settings */
+  .intro { margin: 0 0 12px; }
+  .stack { display: block; margin-bottom: 10px; }
+  .stack .lbl { display: block; color: var(--text2); margin-bottom: 4px; }
+  .muted-2 { color: var(--text3); }
+  .stack .field input { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+  .stack { position: relative; }
+  .field.picker { padding-right: 0; }
+  .field .pick {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin-right: 1px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+  }
+  .field .pick:hover, .field .pick[aria-expanded="true"] { background: var(--bg-hover); color: var(--text); }
+  .field .pick svg { width: 14px; height: 14px; }
+  .status { margin-top: 4px; font-size: 10px; line-height: 14px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status.ok::before { content: '✓ '; color: var(--success); }
+  .status.warn { color: var(--warning); }
+  .status.warn::before { content: '! '; }
+  .status.bad { color: var(--danger); }
+  .status.bad::before { content: '✕ '; }
+
+  /* Variable picker */
+  .picker-pop {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    z-index: 20;
+    padding: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  }
+  .stack .picker-pop { left: 0; right: 0; }
+  .picker-pop > .field { margin-bottom: 4px; }
+  .pk-list { max-height: 232px; overflow-y: auto; }
+  .pk-group {
+    padding: 8px 8px 2px;
+    color: var(--text3);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .pk-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .pk-item.active { background: var(--brand); color: var(--onbrand); }
+  .pk-item.active .pk-meta { color: inherit; opacity: .85; }
+  .pk-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+  }
+  .pk-item.current .pk-name::after { content: ' ✓'; }
+  .pk-meta { flex: none; color: var(--text2); font-variant-numeric: tabular-nums; }
+  .pk-empty { padding: 10px 8px; color: var(--text2); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    background: var(--bg2);
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: var(--text);
+  }
+  .text-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--brand-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  .text-btn:hover { text-decoration: underline; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .section-head h2 { margin: 0; }
+  .reload {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px 0 6px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--brand-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  .reload:hover { background: var(--bg-hover); }
+  .reload:disabled { color: var(--text2); cursor: default; background: transparent; }
+  .reload svg { width: 12px; height: 12px; }
+  .reload.spinning svg { animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .reload-meta { margin: 0 0 8px; color: var(--text3); }
+
+  /* Empty state */
+  .empty-state { border-bottom: 0; padding: 24px 16px; }
+  .empty-state .art { display: block; width: 48px; height: 48px; margin-bottom: 14px; }
+  .empty-state h2 { font-size: 13px; margin-bottom: 6px; }
+  .empty-state p { color: var(--text2); margin: 0 0 14px; }
+  .empty-state .hint { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -247,12 +397,16 @@
   <div id="notice" class="notice" hidden></div>
 
   <section>
-    <div class="grid2">
-      <label class="field"><span>Mode</span><select id="mode"></select></label>
+    <div class="head">
+      <label class="field" id="modeField"><span>Mode</span><select id="mode"></select></label>
       <div class="segmented" id="tabs" role="group" aria-label="Section">
         <button data-tab="grid" aria-pressed="true">Grid</button>
         <button data-tab="spacers" aria-pressed="false">Spacers</button>
       </div>
+      <div class="head-title" id="headTitle" hidden>Grid Helper</div>
+      <button type="button" class="icon-btn" id="settingsBtn" title="Settings: variable names" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </button>
       <label class="field" id="collectionField" hidden><span>Set</span><select id="collection"></select></label>
     </div>
   </section>
@@ -305,6 +459,75 @@
     </table>
   </div>
 
+  <div id="view-settings" hidden>
+    <section>
+      <div class="section-head">
+        <h2>Variable names</h2>
+        <button type="button" class="reload" id="reloadVars" title="Re-read variables from this file, for example after you renamed or added some"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5v3h-3"/></svg><span id="reloadLabel">Reload</span></button>
+      </div>
+      <p class="hint reload-meta" id="reloadMeta"></p>
+      <p class="hint intro">Pick your number variables from the list, or type a name. Use <code>/</code> for groups. Saved in this file, so everyone using the plugin here gets the same names.</p>
+      <div class="stack" data-key="colPrefix">
+        <label class="lbl" for="n-colPrefix">Column prefix <span class="muted-2">· col-12 is the container width</span></label>
+        <div class="field picker"><input type="text" id="n-colPrefix" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="colPrefix" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-colPrefix"></div>
+      </div>
+      <div class="stack" data-key="columns">
+        <label class="lbl" for="n-columns">Number of columns</label>
+        <div class="field picker"><input type="text" id="n-columns" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="columns" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-columns"></div>
+      </div>
+      <div class="stack" data-key="margin">
+        <label class="lbl" for="n-margin">Margin</label>
+        <div class="field picker"><input type="text" id="n-margin" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="margin" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-margin"></div>
+      </div>
+      <div class="stack" data-key="gutter">
+        <label class="lbl" for="n-gutter">Gutter</label>
+        <div class="field picker"><input type="text" id="n-gutter" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="gutter" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-gutter"></div>
+      </div>
+      <div class="stack" data-key="gutterNegative">
+        <label class="lbl" for="n-gutterNegative">Negative gutter</label>
+        <div class="field picker"><input type="text" id="n-gutterNegative" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="gutterNegative" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-gutterNegative"></div>
+      </div>
+      <div class="stack" data-key="pageWidth">
+        <label class="lbl" for="n-pageWidth">Page width</label>
+        <div class="field picker"><input type="text" id="n-pageWidth" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="pageWidth" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-pageWidth"></div>
+      </div>
+    </section>
+    <section>
+      <h2>Spacers</h2>
+      <div class="stack" data-key="spacerPrefix">
+        <label class="lbl" for="n-spacerPrefix">Spacer prefix</label>
+        <div class="field picker"><input type="text" id="n-spacerPrefix" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="spacerPrefix" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-spacerPrefix"></div>
+      </div>
+      <div class="stack" data-key="negativePrefix">
+        <label class="lbl" for="n-negativePrefix">Negative spacer prefix</label>
+        <div class="field picker"><input type="text" id="n-negativePrefix" spellcheck="false" autocomplete="off"><button type="button" class="pick" data-key="negativePrefix" title="Choose from your variables" aria-label="Choose from your variables"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button></div>
+        <div class="status" id="s-negativePrefix"></div>
+      </div>
+      <button type="button" class="text-btn" id="resetNames">Reset to defaults</button>
+    </section>
+    <div class="picker-pop" id="picker" hidden>
+      <div class="field"><input type="text" id="pickerSearch" placeholder="Search variables" spellcheck="false" autocomplete="off"></div>
+      <div class="pk-list" id="pickerList" role="listbox"></div>
+    </div>
+  </div>
+
+  <div id="view-empty" hidden>
+    <section class="empty-state">
+      <svg class="art" viewBox="0 0 128 128" aria-hidden="true"><defs><linearGradient id="gh-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B5CFF"/><stop offset="1" stop-color="#4326E0"/></linearGradient></defs><rect width="128" height="128" rx="28" fill="url(#gh-art)"/><g fill="#fff" fill-opacity="0.26"><rect x="24" y="26" width="10" height="76" rx="3"/><rect x="38" y="26" width="10" height="76" rx="3"/><rect x="52" y="26" width="10" height="76" rx="3"/><rect x="66" y="26" width="10" height="76" rx="3"/><rect x="80" y="26" width="10" height="76" rx="3"/><rect x="94" y="26" width="10" height="76" rx="3"/></g><rect x="24" y="26" width="52" height="34" rx="4" fill="#fff"/><rect x="52" y="68" width="52" height="34" rx="4" fill="#fff"/></svg>
+      <h2>No grid variables in this file yet</h2>
+      <p>Grid Helper looks for a number variable named <code id="emptyName">grid/col/col-12</code>. Create a starter set, or point the plugin at your own variables in <button type="button" class="text-btn" id="emptySettings">Settings</button>.</p>
+      <label class="field"><span>Add to</span><select id="starterTarget"></select></label>
+      <p class="hint">Creates page width, columns, col-1 to col-12, gutter, margin and spacers 1–15 with negatives. Desktop: 1920 page, 1400 container, 12 columns. Mobile: 393 page, 361 container, 6 columns. Variables that already exist are kept as they are.</p>
+    </section>
+  </div>
+
   <div id="empty" class="empty" hidden>Loading variables…</div>
 </main>
 
@@ -322,6 +545,10 @@
   var currentRows = [];
   var tab = 'grid';
   var spacerCount = 0;  // negative spacer variables that need creating or fixing
+  var screen = 'loading'; // 'main' (grid / spacers tabs), 'settings', 'empty' or 'loading'
+  var prevScreen = 'main';
+  var names = null;     // variable names in use (from the file's settings)
+  var defaults = null;  // default variable names
   var driver = 'W';     // 'W' or 'm': whichever of col-12 / margin you typed in last
   var marginLinked = false; // margin follows an alias (existing, or one you're adding)
 
@@ -595,7 +822,7 @@
     var list = data.spacers || [];
     spacerCount = 0;
     if (!list.length) {
-      $('spacerSummary').textContent = 'No variables named spacers/<n> found in this collection.';
+      $('spacerSummary').textContent = 'No variables named ' + (names ? names.spacerPrefix : 'spacers/') + '<n> found in this collection. Change the prefix in Settings.';
       $('spacerHint').textContent = '';
       $('spacerRows').innerHTML = '';
       return;
@@ -650,8 +877,27 @@
 
   function updateButton() {
     var btn = $('apply');
+    var sec = $('reset');
+
+    if (screen === 'settings') {
+      sec.textContent = 'Cancel';
+      sec.title = 'Back without saving';
+      btn.disabled = busy || !settingsValid();
+      btn.textContent = busy ? 'Saving…' : 'Save settings';
+      return;
+    }
+    if (screen === 'empty') {
+      sec.textContent = 'Settings';
+      sec.title = 'Point Grid Helper at your own variable names';
+      btn.disabled = busy;
+      btn.textContent = busy ? 'Creating…' : 'Create grid variables';
+      return;
+    }
+
+    sec.textContent = 'Reset';
+    sec.title = 'Reload values from variables';
     if (busy) { btn.disabled = true; btn.textContent = 'Updating…'; return; }
-    if (!data) { btn.disabled = true; return; }
+    if (!data || screen !== 'main') { btn.disabled = true; btn.textContent = 'Loading…'; return; }
 
     if (tab === 'spacers') {
       btn.disabled = spacerCount === 0;
@@ -675,6 +921,294 @@
   }
 
   function showNotice(text) { $('notice').textContent = text; $('notice').hidden = !text; }
+
+  // ---------- screens: main (grid/spacers), settings, empty, loading ----------
+  function showScreen(s) {
+    if (s !== 'settings') closePicker();
+    screen = s;
+    var main = s === 'main';
+    $('modeField').hidden = !main;
+    $('tabs').hidden = !main;
+    $('collectionField').hidden = !main || !data || data.collections.length < 2;
+    $('headTitle').hidden = main;
+    $('headTitle').textContent = s === 'settings' ? 'Settings' : s === 'empty' ? 'Set up Grid Helper' : 'Grid Helper';
+    $('tab-grid').hidden = !(main && tab === 'grid');
+    $('tab-spacers').hidden = !(main && tab === 'spacers');
+    $('view-settings').hidden = s !== 'settings';
+    $('view-empty').hidden = s !== 'empty';
+    $('empty').hidden = s !== 'loading';
+    $('settingsBtn').disabled = s === 'loading';
+    $('settingsBtn').setAttribute('aria-pressed', String(s === 'settings'));
+    updateButton();
+  }
+
+  // ---------- settings ----------
+  var NAME_KEYS = ['colPrefix', 'columns', 'margin', 'gutter', 'gutterNegative', 'pageWidth', 'spacerPrefix', 'negativePrefix'];
+
+  var PREFIX_KEYS = ['colPrefix', 'spacerPrefix', 'negativePrefix'];
+  var varList = [];     // local number variables: { name, cid, cname, value, alias }
+
+  function fillSettings(values) {
+    NAME_KEYS.forEach(function (k) { $('n-' + k).value = values[k] || ''; });
+    updateStatus();
+  }
+
+  function readSettings() {
+    var out = {};
+    NAME_KEYS.forEach(function (k) { out[k] = $('n-' + k).value.trim(); });
+    return out;
+  }
+
+  function settingsValid() {
+    var s = readSettings();
+    return NAME_KEYS.every(function (k) { return s[k].length > 0; });
+  }
+
+  // ---------- settings: status lines ----------
+  function varsNamed(name) {
+    return varList.filter(function (v) { return v.name === name; });
+  }
+
+  // Numbered members of a prefix group in one collection, e.g. spacers/1 … spacers/15.
+  function numbered(prefix, cid) {
+    var nums = [];
+    varList.forEach(function (v) {
+      if (v.cid !== cid || v.name.indexOf(prefix) !== 0) return;
+      var rest = v.name.slice(prefix.length);
+      if (/^\d+$/.test(rest)) nums.push(parseInt(rest, 10));
+    });
+    return nums.sort(function (a, b) { return a - b; });
+  }
+
+  // The collection Grid Helper will read from: the one holding <column prefix>12.
+  function homeCollection(s) {
+    var hits = varsNamed(s.colPrefix + '12');
+    return hits.length ? { cid: hits[0].cid, cname: hits[0].cname, value: hits[0] } : null;
+  }
+
+  function valueText(v) {
+    return v.alias ? 'alias' : fmt(v.value);
+  }
+
+  function setStatus(key, kind, text) {
+    var el = $('s-' + key);
+    el.className = 'status' + (kind ? ' ' + kind : '');
+    el.textContent = text;
+    el.title = text;
+  }
+
+  function updateStatus() {
+    var s = readSettings();
+    var home = homeCollection(s);
+
+    // Column prefix: needs <prefix>12 (the container); report how many cols exist.
+    if (!s.colPrefix) setStatus('colPrefix', 'bad', 'Required');
+    else if (!home) setStatus('colPrefix', 'bad', 'No variable named ' + s.colPrefix + '12 (the container width)');
+    else {
+      var cols = numbered(s.colPrefix, home.cid).filter(function (n) { return n >= 1 && n <= 12; });
+      setStatus('colPrefix', 'ok', home.cname + ' · ' + cols.length + ' of 12 found · col-12 = ' + valueText(home.value) +
+        (cols.length < 12 ? ' · missing ones can be created' : ''));
+    }
+
+    // Single variables: found in the same collection, elsewhere, or not at all.
+    ['columns', 'margin', 'gutter', 'gutterNegative', 'pageWidth'].forEach(function (k) {
+      var name = s[k];
+      if (!name) return setStatus(k, 'bad', 'Required');
+      var hits = varsNamed(name);
+      var same = home ? hits.filter(function (v) { return v.cid === home.cid; })[0] : hits[0];
+      if (same) return setStatus(k, 'ok', same.cname + ' · ' + valueText(same));
+      if (hits.length && home) return setStatus(k, 'warn', 'In ' + hits[0].cname + ', but the columns are in ' + home.cname + '. Use one collection.');
+      var optional = k === 'gutterNegative' || k === 'pageWidth';
+      setStatus(k, optional ? 'warn' : 'bad', 'Not found' + (k === 'gutterNegative' ? ', will be skipped' : k === 'pageWidth' ? ', 1920 is used' : ''));
+    });
+
+    // Spacer prefixes: count numbered members in the home collection.
+    ['spacerPrefix', 'negativePrefix'].forEach(function (k) {
+      var prefix = s[k];
+      if (!prefix) return setStatus(k, 'bad', 'Required');
+      var cid = home ? home.cid : null;
+      var nums = cid ? numbered(prefix, cid) : [];
+      if (!nums.length) {
+        return setStatus(k, k === 'negativePrefix' ? 'warn' : 'bad',
+          k === 'negativePrefix' ? 'None yet, the Spacers tab can create them' : 'No numbered variables like ' + prefix + '1');
+      }
+      setStatus(k, 'ok', nums.length + ' found · ' + prefix + nums[0] + ' … ' + prefix + nums[nums.length - 1]);
+    });
+  }
+
+  // ---------- settings: variable picker ----------
+  var pickerKey = null;
+  var pickerItems = [];
+  var pickerActive = 0;
+
+  // Items for a field. Prefix fields list numbered groups (grid/col/col- · 1–12);
+  // the other fields list single variables with their value.
+  function pickerCandidates(key) {
+    var s = readSettings();
+    var home = homeCollection(s);
+    var items = [];
+    if (PREFIX_KEYS.indexOf(key) > -1) {
+      var groups = {};
+      varList.forEach(function (v) {
+        var m = /^(.*?)(\d+)$/.exec(v.name);
+        if (!m || !m[1]) return;
+        var id = v.cid + '|' + m[1];
+        if (!groups[id]) groups[id] = { value: m[1], cid: v.cid, group: v.cname, nums: [] };
+        groups[id].nums.push(parseInt(m[2], 10));
+      });
+      Object.keys(groups).forEach(function (id) {
+        var g = groups[id];
+        g.nums.sort(function (a, b) { return a - b; });
+        items.push({ value: g.value, cid: g.cid, group: g.group,
+          meta: g.nums[0] + '–' + g.nums[g.nums.length - 1] + ' · ' + g.nums.length });
+      });
+      items.sort(function (a, b) { return a.value < b.value ? -1 : a.value > b.value ? 1 : 0; });
+    } else {
+      varList.forEach(function (v) {
+        items.push({ value: v.name, cid: v.cid, group: v.cname, meta: valueText(v) });
+      });
+    }
+    // The collection the columns live in comes first.
+    if (home) {
+      items.sort(function (a, b) { return (a.cid === home.cid ? 0 : 1) - (b.cid === home.cid ? 0 : 1); });
+    }
+    return items;
+  }
+
+  function renderPicker() {
+    var q = $('pickerSearch').value.trim().toLowerCase();
+    var current = $('n-' + pickerKey).value.trim();
+    pickerItems = pickerCandidates(pickerKey).filter(function (it) {
+      return !q || it.value.toLowerCase().indexOf(q) > -1;
+    });
+    if (pickerActive >= pickerItems.length) pickerActive = Math.max(0, pickerItems.length - 1);
+
+    if (!pickerItems.length) {
+      $('pickerList').innerHTML = '<div class="pk-empty">' + (varList.length
+        ? 'No matching variables'
+        : 'This file has no local number variables yet') + '</div>';
+      return;
+    }
+    var html = '';
+    var lastGroup = null;
+    pickerItems.forEach(function (it, i) {
+      if (it.group !== lastGroup) {
+        html += '<div class="pk-group">' + escapeHtml(it.group) + '</div>';
+        lastGroup = it.group;
+      }
+      html += '<button type="button" class="pk-item' + (i === pickerActive ? ' active' : '') + (it.value === current ? ' current' : '') +
+        '" data-i="' + i + '" role="option"><span class="pk-name">' + escapeHtml(it.value) + '</span><span class="pk-meta">' + escapeHtml(it.meta) + '</span></button>';
+    });
+    $('pickerList').innerHTML = html;
+    var active = $('pickerList').querySelector('.pk-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openPicker(key) {
+    if (pickerKey === key) return closePicker();
+    closePicker();
+    pickerKey = key;
+    var stack = document.querySelector('.stack[data-key="' + key + '"]');
+    var field = stack.querySelector('.field');
+    var pop = $('picker');
+    stack.appendChild(pop);
+    pop.style.top = (field.offsetTop + field.offsetHeight + 4) + 'px';
+    pop.hidden = false;
+    stack.querySelector('.pick').setAttribute('aria-expanded', 'true');
+    $('pickerSearch').value = '';
+    var current = $('n-' + key).value.trim();
+    pickerItems = pickerCandidates(key);
+    pickerActive = Math.max(0, pickerItems.map(function (it) { return it.value; }).indexOf(current));
+    renderPicker();
+    $('pickerSearch').focus();
+    pop.scrollIntoView({ block: 'nearest' });
+  }
+
+  function closePicker() {
+    if (!pickerKey) return;
+    var btn = document.querySelector('.pick[data-key="' + pickerKey + '"]');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    $('picker').hidden = true;
+    pickerKey = null;
+  }
+
+  function choose(i) {
+    var it = pickerItems[i];
+    if (!it || !pickerKey) return;
+    var key = pickerKey;
+    $('n-' + key).value = it.value;
+    closePicker();
+    updateStatus();
+    updateButton();
+    $('n-' + key).focus();
+  }
+
+  function openSettings() {
+    if (!names) return;
+    prevScreen = screen === 'settings' ? prevScreen : screen;
+    fillSettings(names);
+    showScreen('settings');
+    $('n-colPrefix').focus();
+    reloadVariables(false);
+  }
+
+  // Re-read variables (and the grid values behind Settings) without leaving Settings.
+  // Unsaved names in the fields are kept; only the lists and status lines update.
+  var reloading = false;
+  var reloadTimer = null;
+  function reloadVariables(feedback) {
+    if (reloading) return;
+    reloading = true;
+    var btn = $('reloadVars');
+    btn.disabled = true;
+    btn.classList.add('spinning');
+    $('reloadLabel').textContent = 'Reloading…';
+    btn.setAttribute('data-feedback', feedback ? '1' : '');
+    post({ type: 'load', collectionId: data ? data.collectionId : null, modeId: data ? data.modeId : null, quiet: true });
+  }
+
+  function reloadDone() {
+    reloading = false;
+    if (screen === 'settings') $('collectionField').hidden = true;
+    var btn = $('reloadVars');
+    btn.disabled = false;
+    btn.classList.remove('spinning');
+    var collections = {};
+    varList.forEach(function (v) { collections[v.cid] = true; });
+    var n = Object.keys(collections).length;
+    var t = new Date();
+    var time = ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
+    $('reloadMeta').textContent = varList.length + ' number variable' + (varList.length === 1 ? '' : 's') +
+      ' in ' + n + ' collection' + (n === 1 ? '' : 's') + ' · read at ' + time;
+    $('reloadLabel').textContent = btn.getAttribute('data-feedback') ? 'Reloaded' : 'Reload';
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(function () { $('reloadLabel').textContent = 'Reload'; }, 1500);
+    updateStatus();
+    if (pickerKey) renderPicker();
+    updateButton();
+  }
+
+  function closeSettings() {
+    showScreen(prevScreen === 'empty' ? 'empty' : (data ? 'main' : 'empty'));
+  }
+
+  // Field tooltips show the variable each input maps to.
+  function applyNames() {
+    if (!names) return;
+    var col12 = names.colPrefix + '12';
+    var map = {
+      W: 'Container width (' + col12 + ')',
+      C: names.columns,
+      m: names.margin,
+      g: names.gutter
+    };
+    Object.keys(map).forEach(function (id) {
+      var field = $(id).parentNode;
+      field.setAttribute('data-title', map[id]);
+      field.title = map[id];
+    });
+    $('P').parentNode.title = 'Page width (' + names.pageWidth + ') = margin + col-12 + margin';
+  }
 
   // ---------- events ----------
   ['W', 'm', 'g', 'C', 'P'].forEach(function (id) {
@@ -721,10 +1255,59 @@
       document.querySelectorAll('#tabs button').forEach(function (x) {
         x.setAttribute('aria-pressed', String(x === b));
       });
-      $('tab-grid').hidden = tab !== 'grid';
-      $('tab-spacers').hidden = tab !== 'spacers';
-      updateButton();
+      showScreen('main');
     });
+  });
+
+  $('settingsBtn').addEventListener('click', function () {
+    if (screen === 'settings') closeSettings();
+    else openSettings();
+  });
+  $('emptySettings').addEventListener('click', openSettings);
+  $('reloadVars').addEventListener('click', function () { reloadVariables(true); });
+  NAME_KEYS.forEach(function (k) {
+    $('n-' + k).addEventListener('input', function () { updateStatus(); updateButton(); });
+    // Alt/Option + Down opens the picker from the text field.
+    $('n-' + k).addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); openPicker(k); }
+    });
+  });
+  $('resetNames').addEventListener('click', function () {
+    closePicker();
+    if (defaults) fillSettings(defaults);
+    updateButton();
+  });
+
+  // Picker: open from the chevron, filter while typing, pick with mouse or keyboard.
+  document.querySelectorAll('.pick').forEach(function (b) {
+    b.addEventListener('click', function () { openPicker(b.getAttribute('data-key')); });
+  });
+  $('pickerSearch').addEventListener('input', function () { pickerActive = 0; renderPicker(); });
+  $('pickerSearch').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!pickerItems.length) return;
+      pickerActive = (pickerActive + (e.key === 'ArrowDown' ? 1 : -1) + pickerItems.length) % pickerItems.length;
+      renderPicker();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      choose(pickerActive);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      var key = pickerKey;
+      closePicker();
+      if (key) $('n-' + key).focus();
+    }
+  });
+  $('pickerList').addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep focus in search
+  $('pickerList').addEventListener('click', function (e) {
+    var item = e.target.closest('.pk-item');
+    if (item) choose(parseInt(item.getAttribute('data-i'), 10));
+  });
+  document.addEventListener('mousedown', function (e) {
+    if (!pickerKey) return;
+    if ($('picker').contains(e.target) || e.target.closest('.pick')) return;
+    closePicker();
   });
 
   $('rows').addEventListener('change', function (e) {
@@ -746,10 +1329,25 @@
     post({ type: 'load', collectionId: $('collection').value, modeId: null });
   });
   $('reset').addEventListener('click', function () {
+    if (screen === 'settings') return closeSettings();
+    if (screen === 'empty') return openSettings();
     if (data) post({ type: 'load', collectionId: data.collectionId, modeId: data.modeId });
   });
 
   $('apply').addEventListener('click', function () {
+    if (screen === 'settings') {
+      if (!settingsValid()) return;
+      busy = true;
+      updateButton();
+      post({ type: 'saveNames', names: readSettings(), collectionId: data ? data.collectionId : null, modeId: data ? data.modeId : null });
+      return;
+    }
+    if (screen === 'empty') {
+      busy = true;
+      updateButton();
+      post({ type: 'createStarter', target: $('starterTarget').value });
+      return;
+    }
     if (tab === 'spacers') {
       if (!spacerCount) return;
       busy = true;
@@ -771,24 +1369,45 @@
     if (!msg) return;
     if (msg.type === 'data') {
       data = msg;
-      busy = false;
+      names = msg.names;
+      defaults = msg.defaults;
+      varList = msg.variables || [];
+      var quietData = msg.quiet && screen === 'settings';
+      if (!quietData) { busy = false; closePicker(); }
       overrides = {};
       marginLinked = !!data.base.margin.isAlias;
       driver = marginLinked ? 'm' : 'W';
       showNotice('');
-      $('empty').hidden = true;
       fillSelects();
       fillInputs();
+      applyNames();
       render();
+      if (quietData) { prevScreen = 'main'; reloadDone(); }
+      else showScreen('main');
+    } else if (msg.type === 'empty') {
+      data = null;
+      names = msg.names;
+      defaults = msg.defaults;
+      varList = msg.variables || [];
+      var quietEmpty = msg.quiet && screen === 'settings';
+      if (!quietEmpty) { busy = false; closePicker(); showNotice(''); }
+      $('emptyName').textContent = msg.col12Name;
+      $('starterTarget').innerHTML = '<option value="new">New collection “Grid”</option>' +
+        msg.collections.map(function (c) {
+          return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + '</option>';
+        }).join('');
+      if (quietEmpty) { prevScreen = 'empty'; reloadDone(); }
+      else showScreen('empty');
     } else if (msg.type === 'error') {
       busy = false;
+      if (reloading) { reloading = false; $('reloadVars').disabled = false; $('reloadVars').classList.remove('spinning'); $('reloadLabel').textContent = 'Reload'; }
       showNotice(msg.message);
-      if (!data) $('empty').hidden = true;
       render();
+      updateButton();
     }
   };
 
-  $('empty').hidden = false;
+  showScreen('loading');
   post({ type: 'ready' });
 </script>
 </body>
