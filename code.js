@@ -64,15 +64,41 @@ async function resolveValue(variable, modeId, depth) {
   return typeof raw === 'number' ? raw : null;
 }
 
+// Names an alias points through (nearest first), within the same collection.
+// The UI uses this to let an aliased variable follow a value you're editing,
+// e.g. margin → grid/gutter.
+async function aliasPath(variable, modeId) {
+  var path = [];
+  var v = variable;
+  for (var depth = 0; depth < 10; depth++) {
+    var raw = v.valuesByMode[modeId];
+    if (!isAlias(raw)) break;
+    var target = await figma.variables.getVariableByIdAsync(raw.id);
+    if (!target || target.variableCollectionId !== variable.variableCollectionId) break;
+    path.push(target.name);
+    v = target;
+  }
+  return path;
+}
+
 async function readVar(byName, name, modeId) {
   var v = byName[name];
-  if (!v) return { name: name, id: null, value: null, isAlias: false };
-  return {
+  if (!v) return { name: name, id: null, value: null, isAlias: false, aliasTo: null, aliasPath: [] };
+  var raw = v.valuesByMode[modeId];
+  var info = {
     name: name,
     id: v.id,
     value: await resolveValue(v, modeId, 0),
-    isAlias: isAlias(v.valuesByMode[modeId])
+    isAlias: isAlias(raw),
+    aliasTo: null,
+    aliasPath: []
   };
+  if (info.isAlias) {
+    var target = await figma.variables.getVariableByIdAsync(raw.id);
+    info.aliasTo = target ? target.name : null;
+    info.aliasPath = await aliasPath(v, modeId);
+  }
+  return info;
 }
 
 async function getGridCollections() {
@@ -216,6 +242,8 @@ async function apply(msg) {
     if (item.id) {
       var existing = await figma.variables.getVariableByIdAsync(item.id);
       if (!existing) continue;
+      // Never replace an alias with a fixed number.
+      if (isAlias(existing.valuesByMode[msg.modeId])) continue;
       existing.setValueForMode(msg.modeId, item.value);
       updated++;
       continue;

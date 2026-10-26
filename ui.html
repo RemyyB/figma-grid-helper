@@ -79,6 +79,10 @@
   .field input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .field input[type="number"] { -moz-appearance: textfield; }
   .figma-dark { color-scheme: dark; }
+  .field .tag { font-style: normal; color: var(--text3); padding-right: 8px; white-space: nowrap; }
+  .field.locked, .field.locked:hover, .field.locked:focus-within { background: transparent; border: 1px dashed var(--border-strong); }
+  .field.locked input { color: var(--text2); cursor: default; }
+  .muted { color: var(--text2); }
 
   .segmented {
     display: flex;
@@ -164,6 +168,9 @@
     vertical-align: 1px;
   }
   .pill.new { background: var(--brand); color: var(--onbrand); }
+  .pill.link { text-transform: none; letter-spacing: 0; font-size: 10px; }
+  tr.linked td { color: var(--text2); }
+  tr.linked td.next { font-weight: 400; color: var(--text); }
   .pill.mode { background: transparent; color: var(--brand-text); box-shadow: inset 0 0 0 1px var(--brand-text); }
 
   .t-spacers th:first-child, .t-spacers td:first-child { width: auto; }
@@ -234,9 +241,9 @@
   <div id="tab-grid">
   <section>
     <div class="grid2">
-      <label class="field" title="Container width (grid/col/col-12)"><span>col-12</span><input id="W" type="number" step="1" min="1"></label>
-      <label class="field" title="grid/gutter"><span>Gutter</span><input id="g" type="number" step="1" min="0"></label>
-      <label class="field" title="grid/col/columns"><span>Columns</span><input id="C" type="number" step="1" min="1"></label>
+      <label class="field" title="Container width (grid/col/col-12)" data-title="Container width (grid/col/col-12)"><span>col-12</span><input id="W" type="number" step="1" min="1"><em class="tag" id="W-tag"></em></label>
+      <label class="field" title="grid/gutter" data-title="grid/gutter"><span>Gutter</span><input id="g" type="number" step="1" min="0"><em class="tag" id="g-tag"></em></label>
+      <label class="field" title="grid/col/columns" data-title="grid/col/columns"><span>Columns</span><input id="C" type="number" step="1" min="1"><em class="tag" id="C-tag"></em></label>
       <label class="field" title="Used for grid/margin/margin = (page width − col-12) / 2"><span>Page</span><input id="P" type="number" step="1" min="1"></label>
     </div>
     <div class="row" style="margin-top:8px">
@@ -349,33 +356,108 @@
     return null;
   }
 
+  // ---------- aliases ----------
+  function shortName(name) { return String(name || '').replace(/^grid\//, ''); }
+
+  // Value an aliased variable will have after the update: if its alias chain
+  // points at something being edited here (e.g. margin → gutter), use the new
+  // value; otherwise it keeps its current value.
+  function follow(v, pending) {
+    for (var i = 0; i < v.aliasPath.length; i++) {
+      if (v.aliasPath[i] in pending) return pending[v.aliasPath[i]];
+    }
+    return v.value;
+  }
+
+  // Works out the grid for the selected mode. Aliased variables are never
+  // written; they follow their alias. When margin is aliased it drives col-12
+  // (col-12 = page − 2 × margin) instead of being calculated from it.
+  function model() {
+    var b = data.base;
+    var pending = {};
+    var locked = {};
+
+    function input(id, v) {
+      if (v.isAlias) {
+        locked[id] = { tag: 'alias', title: 'Follows ' + v.aliasTo + '. Change that variable to change this.' };
+        return follow(v, pending);
+      }
+      return num(id);
+    }
+
+    var g = input('g', b.gutter);
+    pending[b.gutter.name] = g;
+    var C = input('C', b.columns);
+    pending[b.columns.name] = C;
+    var P = num('P');
+    pending[b.pageWidth.name] = P;
+    var gn = b.gutterNegative.isAlias ? follow(b.gutterNegative, pending) : negate(roundValue(g, rounding));
+    pending[b.gutterNegative.name] = gn;
+
+    var marginDrives = b.margin.isAlias && b.margin.aliasPath.indexOf(b.col12.name) === -1;
+    var W, m;
+    if (b.col12.isAlias) {
+      W = input('W', b.col12);
+    } else if (marginDrives) {
+      m = follow(b.margin, pending);
+      W = P - 2 * m;
+      locked.W = { tag: 'auto', title: 'page − 2 × margin (margin follows ' + b.margin.aliasTo + ')' };
+    } else {
+      W = num('W');
+    }
+    pending[b.col12.name] = W;
+
+    if (m === undefined) m = b.margin.isAlias ? follow(b.margin, pending) : roundValue((P - W) / 2, rounding);
+    pending[b.margin.name] = m;
+
+    return { W: W, g: g, C: C, P: P, m: m, gn: gn, pending: pending, locked: locked };
+  }
+
+  // Locked inputs show the value they get from their alias (or from margin).
+  function applyLocks(mdl) {
+    ['W', 'g', 'C'].forEach(function (id) {
+      var lock = mdl.locked[id];
+      var el = $(id);
+      var field = el.parentNode;
+      field.classList.toggle('locked', !!lock);
+      el.readOnly = !!lock;
+      $(id + '-tag').textContent = lock ? lock.tag : '';
+      field.title = lock ? lock.title : field.getAttribute('data-title');
+      if (lock) {
+        var v = id === 'W' ? mdl.W : id === 'g' ? mdl.g : mdl.C;
+        el.value = (v === null || isNaN(v)) ? '' : v;
+      }
+    });
+  }
+
   // ---------- rows ----------
   function makeRow(v, next, label, creatable) {
     var status;
     if (!v.id) status = creatable ? 'new' : 'missing';
+    else if (v.isAlias) status = 'linked';
     else if (v.value === null || Math.abs(next - v.value) > 0.0005) status = 'changed';
     else status = 'same';
     var enabled = status === 'new' || status === 'changed';
-    var def = status === 'new' || (status === 'changed' && !v.isAlias);
-    var checked = enabled && (v.name in overrides ? overrides[v.name] : def);
+    var checked = enabled && (v.name in overrides ? overrides[v.name] : true);
     return {
       name: v.name, id: v.id, n: v.n || null, label: label,
-      current: v.value, next: next, isAlias: v.isAlias,
+      current: v.value, next: next, isAlias: v.isAlias, aliasTo: v.aliasTo,
       status: status, enabled: enabled, checked: checked
     };
   }
 
-  function computeRows(W, g, C, P) {
+  function computeRows(mdl) {
+    var b = data.base;
     var rows = [];
     data.cols.forEach(function (c) {
-      rows.push(makeRow(c, roundValue(spanWidth(c.n, W, g, C), rounding), 'col-' + c.n, true));
+      var next = c.isAlias ? follow(c, mdl.pending) : roundValue(spanWidth(c.n, mdl.W, mdl.g, mdl.C), rounding);
+      rows.push(makeRow(c, next, 'col-' + c.n, true));
     });
-    var gr = roundValue(g, rounding);
     rows.push({ group: 'Grid' });
-    rows.push(makeRow(data.base.gutter, gr, 'gutter', false));
-    rows.push(makeRow(data.base.gutterNegative, gr === 0 ? 0 : -gr, 'gutter-negative', false));
-    rows.push(makeRow(data.base.columns, C, 'columns', false));
-    rows.push(makeRow(data.base.margin, roundValue((P - W) / 2, rounding), 'margin', false));
+    rows.push(makeRow(b.gutter, b.gutter.isAlias ? mdl.g : roundValue(mdl.g, rounding), 'gutter', false));
+    rows.push(makeRow(b.gutterNegative, mdl.gn, 'gutter-negative', false));
+    rows.push(makeRow(b.columns, mdl.C, 'columns', false));
+    rows.push(makeRow(b.margin, mdl.m, 'margin', false));
     return rows;
   }
 
@@ -391,8 +473,13 @@
   }
 
   function renderGrid() {
-    var W = num('W'), g = num('g'), C = num('C'), P = num('P');
-    var err = validate(W, g, C, P);
+    var mdl = model();
+    applyLocks(mdl);
+    var W = mdl.W, g = mdl.g, C = mdl.C, P = mdl.P;
+    var marginAlias = data.base.margin.isAlias;
+    var err = (marginAlias && (mdl.m === null || isNaN(mdl.m)))
+      ? 'Couldn\'t resolve the margin alias.'
+      : validate(W, g, C, P);
 
     if (err) {
       $('summary').innerHTML = '<span class="invalid">' + err + '</span>';
@@ -402,18 +489,18 @@
     }
 
     var colW = (W - (C - 1) * g) / C;
-    var margin = (P - W) / 2;
     $('summary').innerHTML =
-      '1 column <b>' + fmt(colW) + '</b> · margin <b>' + fmt(margin) + '</b>' +
-      (margin < 0 ? ' <span class="invalid">(col-12 is wider than the page)</span>' : '');
+      '1 column <b>' + fmt(colW) + '</b> · margin <b>' + fmt(mdl.m) + '</b>' +
+      (marginAlias ? ' <span class="muted">→ ' + escapeHtml(shortName(data.base.margin.aliasTo)) + '</span>' : '') +
+      (mdl.m < 0 ? ' <span class="invalid">(col-12 is wider than the page)</span>' : '');
 
-    currentRows = computeRows(W, g, C, P);
+    currentRows = computeRows(mdl);
     $('rows').innerHTML = currentRows.map(function (r, i) {
       if (r.group) return '<tr class="group"><td></td><td colspan="3">' + r.group + '</td></tr>';
       var pills = '';
       if (r.status === 'new') pills += '<span class="pill new">new</span>';
       if (r.status === 'missing') pills += '<span class="pill">not found</span>';
-      if (r.isAlias) pills += '<span class="pill" title="Writing replaces the alias with a fixed value">alias</span>';
+      if (r.isAlias) pills += '<span class="pill link" title="Alias of ' + escapeHtml(r.aliasTo || '') + '. Follows it, never overwritten.">→ ' + escapeHtml(shortName(r.aliasTo) || 'alias') + '</span>';
       return '<tr class="' + r.status + '">' +
         '<td><input type="checkbox" data-i="' + i + '"' + (r.checked ? ' checked' : '') + (r.enabled ? '' : ' disabled') + '></td>' +
         '<td class="name" title="' + escapeHtml(r.name) + '">' + r.label + pills + '</td>' +
