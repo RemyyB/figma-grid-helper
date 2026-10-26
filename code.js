@@ -242,8 +242,16 @@ async function apply(msg) {
     if (item.id) {
       var existing = await figma.variables.getVariableByIdAsync(item.id);
       if (!existing) continue;
-      // Never replace an alias with a fixed number.
-      if (isAlias(existing.valuesByMode[msg.modeId])) continue;
+      // Link: turn this variable into an alias (margin → gutter).
+      if (item.alias) {
+        var target = byName[item.alias];
+        if (!target || target.id === existing.id) continue;
+        existing.setValueForMode(msg.modeId, figma.variables.createVariableAlias(target));
+        updated++;
+        continue;
+      }
+      // Never replace an alias with a fixed number, unless you split it on purpose.
+      if (isAlias(existing.valuesByMode[msg.modeId]) && !item.unlink) continue;
       existing.setValueForMode(msg.modeId, item.value);
       updated++;
       continue;

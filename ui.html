@@ -83,6 +83,25 @@
   .field.locked, .field.locked:hover, .field.locked:focus-within { background: transparent; border: 1px dashed var(--border-strong); }
   .field.locked input { color: var(--text2); cursor: default; }
   .muted { color: var(--text2); }
+  .field .link {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 1px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+  }
+  .field .link:hover { background: var(--bg-hover); color: var(--text); }
+  .field .link[aria-pressed="true"] { color: var(--brand-text); }
+  .field .link svg { width: 14px; height: 14px; }
+  .field .link[hidden] { display: none; }
 
   .segmented {
     display: flex;
@@ -242,15 +261,14 @@
   <section>
     <div class="grid2">
       <label class="field" title="Container width (grid/col/col-12)" data-title="Container width (grid/col/col-12)"><span>col-12</span><input id="W" type="number" step="1" min="1"><em class="tag" id="W-tag"></em></label>
+      <label class="field" title="grid/margin/margin" data-title="grid/margin/margin"><span>Margin</span><input id="m" type="number" step="1"><em class="tag" id="m-tag"></em><button type="button" class="link" id="mLink" aria-pressed="false"></button></label>
       <label class="field" title="grid/gutter" data-title="grid/gutter"><span>Gutter</span><input id="g" type="number" step="1" min="0"><em class="tag" id="g-tag"></em></label>
       <label class="field" title="grid/col/columns" data-title="grid/col/columns"><span>Columns</span><input id="C" type="number" step="1" min="1"><em class="tag" id="C-tag"></em></label>
-      <label class="field" title="Used for grid/margin/margin = (page width − col-12) / 2"><span>Page</span><input id="P" type="number" step="1" min="1"></label>
-    </div>
-    <div class="row" style="margin-top:8px">
+      <label class="field" title="Page width = margin + col-12 + margin"><span>Page</span><input id="P" type="number" step="1" min="1"></label>
       <div class="segmented" id="rounding" role="group" aria-label="Rounding">
-        <button data-r="nearest" aria-pressed="false">Round</button>
-        <button data-r="floor" aria-pressed="true">Floor</button>
-        <button data-r="none" aria-pressed="false">Off (0.01)</button>
+        <button data-r="nearest" aria-pressed="false" title="Round to the nearest pixel">Round</button>
+        <button data-r="floor" aria-pressed="true" title="Round down, so stacked spans never exceed col-12">Floor</button>
+        <button data-r="none" aria-pressed="false" title="No rounding (2 decimals)">Off</button>
       </div>
     </div>
     <p class="summary" id="summary"></p>
@@ -304,6 +322,11 @@
   var currentRows = [];
   var tab = 'grid';
   var spacerCount = 0;  // negative spacer variables that need creating or fixing
+  var driver = 'W';     // 'W' or 'm': whichever of col-12 / margin you typed in last
+  var marginLinked = false; // margin follows an alias (existing, or one you're adding)
+
+  var ICON_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  var ICON_UNLINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="M8 2v3M2 8h3M16 19v3M19 16h3"/></svg>';
 
   function post(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
 
@@ -342,6 +365,7 @@
   function fillInputs() {
     var b = data.base;
     $('W').value = b.col12.value !== null ? b.col12.value : '';
+    $('m').value = b.margin.value !== null ? b.margin.value : '';
     $('g').value = b.gutter.value !== null ? b.gutter.value : 0;
     $('C').value = b.columns.value !== null ? b.columns.value : 12;
     $('P').value = b.pageWidth.value !== null ? b.pageWidth.value : data.fallbackPageWidth;
@@ -369,9 +393,17 @@
     return v.value;
   }
 
-  // Works out the grid for the selected mode. Aliased variables are never
-  // written; they follow their alias. When margin is aliased it drives col-12
-  // (col-12 = page − 2 × margin) instead of being calculated from it.
+  // What the margin link points at: its current alias, or gutter for a new link.
+  function linkInfo() {
+    var mv = data.base.margin;
+    if (mv.isAlias) return { name: mv.aliasTo, path: mv.aliasPath, isNew: false, value: mv.value };
+    return { name: data.base.gutter.name, path: [data.base.gutter.name], isNew: true, value: null };
+  }
+
+  // Works out the grid for the selected mode.
+  // page = margin + col-12 + margin. Type in col-12 or margin and the other follows.
+  // A linked margin (alias) follows its target and then drives col-12.
+  // Aliased variables are never written unless you split or link the margin yourself.
   function model() {
     var b = data.base;
     var pending = {};
@@ -394,28 +426,40 @@
     var gn = b.gutterNegative.isAlias ? follow(b.gutterNegative, pending) : negate(roundValue(g, rounding));
     pending[b.gutterNegative.name] = gn;
 
-    var marginDrives = b.margin.isAlias && b.margin.aliasPath.indexOf(b.col12.name) === -1;
     var W, m;
+    if (marginLinked) {
+      var link = linkInfo();
+      m = follow({ aliasPath: link.path, value: link.value }, pending);
+      locked.m = { tag: '→ ' + shortName(link.name), title: 'Linked to ' + link.name };
+    }
+
     if (b.col12.isAlias) {
       W = input('W', b.col12);
-    } else if (marginDrives) {
-      m = follow(b.margin, pending);
+      if (!marginLinked) {
+        m = roundValue((P - W) / 2, rounding);
+        locked.m = { tag: 'auto', title: '(page − col-12) / 2' };
+      }
+    } else if (marginLinked) {
       W = P - 2 * m;
-      locked.W = { tag: 'auto', title: 'page − 2 × margin (margin follows ' + b.margin.aliasTo + ')' };
+      locked.W = { tag: 'auto', title: 'page − 2 × margin' };
+    } else if (driver === 'm') {
+      m = num('m');
+      W = P - 2 * m;
     } else {
       W = num('W');
+      m = roundValue((P - W) / 2, rounding);
     }
     pending[b.col12.name] = W;
-
-    if (m === undefined) m = b.margin.isAlias ? follow(b.margin, pending) : roundValue((P - W) / 2, rounding);
     pending[b.margin.name] = m;
 
     return { W: W, g: g, C: C, P: P, m: m, gn: gn, pending: pending, locked: locked };
   }
 
-  // Locked inputs show the value they get from their alias (or from margin).
+  // Locked inputs show the value they get from their alias (or derive);
+  // the col-12 / margin field you're not typing in follows the other.
   function applyLocks(mdl) {
-    ['W', 'g', 'C'].forEach(function (id) {
+    var values = { W: mdl.W, m: mdl.m, g: mdl.g, C: mdl.C };
+    ['W', 'm', 'g', 'C'].forEach(function (id) {
       var lock = mdl.locked[id];
       var el = $(id);
       var field = el.parentNode;
@@ -423,11 +467,22 @@
       el.readOnly = !!lock;
       $(id + '-tag').textContent = lock ? lock.tag : '';
       field.title = lock ? lock.title : field.getAttribute('data-title');
-      if (lock) {
-        var v = id === 'W' ? mdl.W : id === 'g' ? mdl.g : mdl.C;
-        el.value = (v === null || isNaN(v)) ? '' : v;
+      var follows = (id === 'W' && driver === 'm') || (id === 'm' && driver === 'W');
+      if (lock || follows) {
+        var v = values[id];
+        el.value = (v === null || v === undefined || isNaN(v)) ? '' : fmt(v);
       }
     });
+
+    var btn = $('mLink');
+    var mv = data.base.margin;
+    var link = linkInfo();
+    btn.hidden = !mv.id || (!mv.isAlias && !data.base.gutter.id);
+    btn.setAttribute('aria-pressed', String(marginLinked));
+    btn.innerHTML = marginLinked ? ICON_LINK : ICON_UNLINK;
+    btn.title = marginLinked
+      ? 'Linked to ' + link.name + '. Click to split margin from it.'
+      : 'Link margin to ' + link.name;
   }
 
   // ---------- rows ----------
@@ -457,8 +512,22 @@
     rows.push(makeRow(b.gutter, b.gutter.isAlias ? mdl.g : roundValue(mdl.g, rounding), 'gutter', false));
     rows.push(makeRow(b.gutterNegative, mdl.gn, 'gutter-negative', false));
     rows.push(makeRow(b.columns, mdl.C, 'columns', false));
-    rows.push(makeRow(b.margin, mdl.m, 'margin', false));
+    rows.push(marginRow(mdl));
     return rows;
+  }
+
+  // Margin row. Splitting a linked margin writes a fixed value over the alias;
+  // linking a plain margin turns it into an alias.
+  function marginRow(mdl) {
+    var mv = data.base.margin;
+    var r = makeRow(mv, mdl.m, 'margin', false);
+    if (!mv.id || mv.isAlias === marginLinked) return r;
+    r.status = 'changed';
+    r.enabled = true;
+    r.checked = mv.name in overrides ? overrides[mv.name] : true;
+    if (marginLinked) r.linkTo = linkInfo().name;
+    else r.unlink = true;
+    return r;
   }
 
   function modeName() {
@@ -476,10 +545,10 @@
     var mdl = model();
     applyLocks(mdl);
     var W = mdl.W, g = mdl.g, C = mdl.C, P = mdl.P;
-    var marginAlias = data.base.margin.isAlias;
-    var err = (marginAlias && (mdl.m === null || isNaN(mdl.m)))
-      ? 'Couldn\'t resolve the margin alias.'
-      : validate(W, g, C, P);
+    var err;
+    if (marginLinked && (mdl.m === null || isNaN(mdl.m))) err = 'Couldn\'t resolve the margin alias.';
+    else if (driver === 'm' && !marginLinked && isNaN(mdl.m)) err = 'Margin must be a number.';
+    else err = validate(W, g, C, P);
 
     if (err) {
       $('summary').innerHTML = '<span class="invalid">' + err + '</span>';
@@ -488,10 +557,13 @@
       return;
     }
 
+    // page = margin + col-12 + margin; flag it when rounding makes it not add up.
     var colW = (W - (C - 1) * g) / C;
+    var sum = clean(2 * mdl.m + W);
     $('summary').innerHTML =
-      '1 column <b>' + fmt(colW) + '</b> · margin <b>' + fmt(mdl.m) + '</b>' +
-      (marginAlias ? ' <span class="muted">→ ' + escapeHtml(shortName(data.base.margin.aliasTo)) + '</span>' : '') +
+      '1 column <b>' + fmt(colW) + '</b> · ' +
+      '<span title="margin + col-12 + margin">' + fmt(mdl.m) + ' + ' + fmt(W) + ' + ' + fmt(mdl.m) + ' = ' + fmt(sum) + '</span>' +
+      (Math.abs(sum - P) > 0.0005 ? ' <span class="invalid">≠ page ' + fmt(P) + '</span>' : '') +
       (mdl.m < 0 ? ' <span class="invalid">(col-12 is wider than the page)</span>' : '');
 
     currentRows = computeRows(mdl);
@@ -500,7 +572,9 @@
       var pills = '';
       if (r.status === 'new') pills += '<span class="pill new">new</span>';
       if (r.status === 'missing') pills += '<span class="pill">not found</span>';
-      if (r.isAlias) pills += '<span class="pill link" title="Alias of ' + escapeHtml(r.aliasTo || '') + '. Follows it, never overwritten.">→ ' + escapeHtml(shortName(r.aliasTo) || 'alias') + '</span>';
+      if (r.unlink) pills += '<span class="pill link" title="Replaces the alias with a fixed value">split</span>';
+      else if (r.linkTo) pills += '<span class="pill link" title="Becomes an alias of ' + escapeHtml(r.linkTo) + '">link → ' + escapeHtml(shortName(r.linkTo)) + '</span>';
+      else if (r.isAlias) pills += '<span class="pill link" title="Alias of ' + escapeHtml(r.aliasTo || '') + '. Follows it, never overwritten.">→ ' + escapeHtml(shortName(r.aliasTo) || 'alias') + '</span>';
       return '<tr class="' + r.status + '">' +
         '<td><input type="checkbox" data-i="' + i + '"' + (r.checked ? ' checked' : '') + (r.enabled ? '' : ' disabled') + '></td>' +
         '<td class="name" title="' + escapeHtml(r.name) + '">' + r.label + pills + '</td>' +
@@ -603,7 +677,21 @@
   function showNotice(text) { $('notice').textContent = text; $('notice').hidden = !text; }
 
   // ---------- events ----------
-  ['W', 'g', 'C', 'P'].forEach(function (id) { $(id).addEventListener('input', render); });
+  ['W', 'm', 'g', 'C', 'P'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      if (id === 'W' || id === 'm') driver = id;
+      render();
+    });
+  });
+
+  // Split a linked margin from its alias, or link a plain margin to gutter.
+  $('mLink').addEventListener('click', function (e) {
+    e.preventDefault();
+    if (!data) return;
+    marginLinked = !marginLinked;
+    if (!marginLinked) driver = 'm'; // keep the margin it had, col-12 follows
+    render();
+  });
 
   document.querySelectorAll('#rounding button').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -658,7 +746,7 @@
       return;
     }
     var items = selectedItems().map(function (r) {
-      return { name: r.name, id: r.id, n: r.n, value: r.next };
+      return { name: r.name, id: r.id, n: r.n, value: r.next, unlink: !!r.unlink, alias: r.linkTo || null };
     });
     if (!items.length) return;
     busy = true;
@@ -673,6 +761,8 @@
       data = msg;
       busy = false;
       overrides = {};
+      marginLinked = !!data.base.margin.isAlias;
+      driver = marginLinked ? 'm' : 'W';
       showNotice('');
       $('empty').hidden = true;
       fillSelects();
