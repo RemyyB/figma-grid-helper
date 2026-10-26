@@ -1,0 +1,30 @@
+# Grid Columns
+
+Calculates `grid/col/col-1` … `col-12` from col-12, gutter and columns, and writes the result to one variable mode at a time.
+
+## Install
+
+Figma desktop → Plugins → Development → Import plugin from manifest… → pick `manifest.json` in this folder.
+
+## Use
+
+1. Pick the mode (Desktop / Mobile). Inputs load from that mode's variables.
+2. Change col-12, gutter, columns or page width to experiment. The table shows current vs new.
+3. Tick the rows you want written and hit Update. Only the selected mode changes. Cmd+Z undoes the whole batch.
+
+## Formula
+
+```
+column    = (col-12 − (columns − 1) × gutter) / columns
+col-N     = N × column + (N − 1) × gutter      (N ≥ columns → col-12)
+margin    = (page width − col-12) / 2
+gutter-negative = −gutter
+```
+
+Rounding: Round (nearest px), Floor (stacked spans never exceed col-12) or Off (2 decimals).
+
+## Notes
+
+- Missing col-N variables (Desktop had no col-10 / col-11) are created. The mode you're editing gets the value from the table; other modes get a value calculated from their own col-12, gutter and columns. New variables copy col-12's scopes.
+- Aliased variables are marked `alias` and unticked by default, because writing replaces the alias with a fixed number.
+- Variable names live in `CONFIG` at the top of `code.js`.

@@ -1,0 +1,485 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: var(--figma-color-bg, #ffffff);
+    --bg2: var(--figma-color-bg-secondary, #f5f5f5);
+    --bg-hover: var(--figma-color-bg-hover, #f0f0f0);
+    --text: var(--figma-color-text, #1e1e1e);
+    --text2: var(--figma-color-text-secondary, #757575);
+    --text3: var(--figma-color-text-tertiary, #b3b3b3);
+    --border: var(--figma-color-border, #e6e6e6);
+    --border-strong: var(--figma-color-border-strong, #c4c4c4);
+    --brand: var(--figma-color-bg-brand, #0d99ff);
+    --brand-hover: var(--figma-color-bg-brand-hover, #007be5);
+    --brand-text: var(--figma-color-text-brand, #007be5);
+    --onbrand: var(--figma-color-text-onbrand, #ffffff);
+    --danger: var(--figma-color-text-danger, #dc3412);
+    --danger-bg: var(--figma-color-bg-danger-tertiary, #ffe2e0);
+    --success: var(--figma-color-text-success, #14ae5c);
+    --disabled-bg: var(--figma-color-bg-disabled, #d9d9d9);
+    --disabled-text: var(--figma-color-text-disabled, #b3b3b3);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 11px/16px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main { flex: 1; overflow-y: auto; }
+  section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  h2 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .row { display: flex; gap: 8px; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+
+  /* Figma-style fields */
+  .field {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    background: var(--bg2);
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 0 0 0 8px;
+  }
+  .field:hover { border-color: var(--border); }
+  .field:focus-within { border-color: var(--brand); }
+  .field span {
+    color: var(--text2);
+    white-space: nowrap;
+    padding-right: 6px;
+  }
+  .field input, .field select {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    padding: 0 8px 0 0;
+  }
+  .field select { cursor: pointer; padding-right: 4px; }
+  .field input::-webkit-inner-spin-button,
+  .field input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .field input[type="number"] { -moz-appearance: textfield; }
+  .figma-dark { color-scheme: dark; }
+
+  .segmented {
+    display: flex;
+    background: var(--bg2);
+    border-radius: 5px;
+    padding: 2px;
+    flex: 1;
+  }
+  .segmented button {
+    flex: 1;
+    height: 24px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text2);
+    font: inherit;
+    cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] {
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  .summary {
+    margin: 10px 0 0;
+    color: var(--text2);
+    font-variant-numeric: tabular-nums;
+  }
+  .summary b { color: var(--text); font-weight: 600; }
+  .invalid { color: var(--danger); }
+
+  .notice {
+    margin: 12px 16px 0;
+    padding: 8px 10px;
+    border-radius: 5px;
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    color: var(--text2);
+    font-weight: 400;
+    text-align: left;
+    height: 32px;
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+  }
+  td { height: 28px; }
+  th:first-child, td:first-child { width: 36px; padding-left: 16px; }
+  th:last-child, td:last-child { padding-right: 16px; }
+  .num { text-align: right; width: 72px; }
+  tbody tr:hover td { background: var(--bg-hover); }
+  tr.group td {
+    height: 32px;
+    padding-top: 8px;
+    color: var(--text2);
+    font-weight: 600;
+    background: var(--bg) !important;
+  }
+  tr.same td { color: var(--text3); }
+  tr.same td.name { color: var(--text2); }
+  td.next { font-weight: 600; }
+  tr.changed td.next, tr.new td.next { color: var(--brand-text); }
+  tr.same td.next { font-weight: 400; }
+  td.name { white-space: nowrap; }
+  .pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    line-height: 14px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    background: var(--bg2);
+    color: var(--text2);
+    vertical-align: 1px;
+  }
+  .pill.new { background: var(--brand); color: var(--onbrand); }
+
+  input[type="checkbox"] {
+    margin: 0;
+    width: 14px;
+    height: 14px;
+    accent-color: var(--brand);
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  input[type="checkbox"]:disabled { cursor: default; opacity: .35; }
+
+  footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  button.btn {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 5px;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+  }
+  .btn.secondary:hover { background: var(--bg-hover); }
+  .btn.primary {
+    flex: 1;
+    background: var(--brand);
+    color: var(--onbrand);
+    border: 0;
+  }
+  .btn.primary:hover { background: var(--brand-hover); }
+  .btn.primary:disabled {
+    background: var(--disabled-bg);
+    color: var(--disabled-text);
+    cursor: default;
+  }
+
+  .empty { padding: 24px 16px; color: var(--text2); }
+</style>
+</head>
+<body>
+<main>
+  <div id="notice" class="notice" hidden></div>
+
+  <section>
+    <div class="grid2">
+      <label class="field"><span>Mode</span><select id="mode"></select></label>
+      <label class="field" id="collectionField" hidden><span>Set</span><select id="collection"></select></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Grid</h2>
+    <div class="grid2">
+      <label class="field" title="Container width (grid/col/col-12)"><span>col-12</span><input id="W" type="number" step="1" min="1"></label>
+      <label class="field" title="grid/gutter"><span>Gutter</span><input id="g" type="number" step="1" min="0"></label>
+      <label class="field" title="grid/col/columns"><span>Columns</span><input id="C" type="number" step="1" min="1"></label>
+      <label class="field" title="Used for grid/margin/margin = (page width − col-12) / 2"><span>Page</span><input id="P" type="number" step="1" min="1"></label>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="segmented" role="group" aria-label="Rounding">
+        <button data-r="nearest" aria-pressed="true">Round</button>
+        <button data-r="floor" aria-pressed="false">Floor</button>
+        <button data-r="none" aria-pressed="false">Off (0.01)</button>
+      </div>
+    </div>
+    <p class="summary" id="summary"></p>
+  </section>
+
+  <table>
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="all" title="Select all changes"></th>
+        <th>Variable</th>
+        <th class="num">Current</th>
+        <th class="num">New</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="empty" class="empty" hidden>Loading variables…</div>
+</main>
+
+<footer>
+  <button class="btn secondary" id="reset" title="Reload values from variables">Reset</button>
+  <button class="btn primary" id="apply" disabled>Update</button>
+</footer>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var data = null;
+  var rounding = 'nearest';
+  var overrides = {};   // variable name -> checked, set by the user
+  var busy = false;
+  var currentRows = [];
+
+  function post(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
+
+  // ---------- math (same as in code.js) ----------
+  function clean(x) { return Math.round(x * 1000) / 1000; }
+  function roundValue(x, r) {
+    var v = clean(x);
+    if (r === 'floor') return Math.floor(v);
+    if (r === 'none') return Math.round(v * 100) / 100;
+    return Math.round(v);
+  }
+  function spanWidth(n, W, g, C) {
+    if (n >= C) return W;
+    var col = (W - (C - 1) * g) / C;
+    return n * col + (n - 1) * g;
+  }
+
+  function fmt(n) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    return String(parseFloat(Number(n).toFixed(2)));
+  }
+  function num(id) { return parseFloat($(id).value); }
+
+  // ---------- inputs ----------
+  function fillSelects() {
+    $('mode').innerHTML = data.modes.map(function (m) {
+      return '<option value="' + m.modeId + '"' + (m.modeId === data.modeId ? ' selected' : '') + '>' + escapeHtml(m.name) + '</option>';
+    }).join('');
+    $('collection').innerHTML = data.collections.map(function (c) {
+      return '<option value="' + c.id + '"' + (c.id === data.collectionId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join('');
+    $('collectionField').hidden = data.collections.length < 2;
+  }
+
+  function fillInputs() {
+    var b = data.base;
+    $('W').value = b.col12.value !== null ? b.col12.value : '';
+    $('g').value = b.gutter.value !== null ? b.gutter.value : 0;
+    $('C').value = b.columns.value !== null ? b.columns.value : 12;
+    $('P').value = b.pageWidth.value !== null ? b.pageWidth.value : data.fallbackPageWidth;
+  }
+
+  function validate(W, g, C, P) {
+    if (!(W > 0)) return 'col-12 must be larger than 0.';
+    if (!(g >= 0)) return 'Gutter can\'t be negative.';
+    if (!(C >= 1) || Math.floor(C) !== C) return 'Columns must be a whole number of 1 or more.';
+    if ((W - (C - 1) * g) / C <= 0) return 'The gutters don\'t fit inside col-12.';
+    if (!(P > 0)) return 'Page width must be larger than 0.';
+    return null;
+  }
+
+  // ---------- rows ----------
+  function makeRow(v, next, label, creatable) {
+    var status;
+    if (!v.id) status = creatable ? 'new' : 'missing';
+    else if (v.value === null || Math.abs(next - v.value) > 0.0005) status = 'changed';
+    else status = 'same';
+    var enabled = status === 'new' || status === 'changed';
+    var def = status === 'new' || (status === 'changed' && !v.isAlias);
+    var checked = enabled && (v.name in overrides ? overrides[v.name] : def);
+    return {
+      name: v.name, id: v.id, n: v.n || null, label: label,
+      current: v.value, next: next, isAlias: v.isAlias,
+      status: status, enabled: enabled, checked: checked
+    };
+  }
+
+  function computeRows(W, g, C, P) {
+    var rows = [];
+    data.cols.forEach(function (c) {
+      rows.push(makeRow(c, roundValue(spanWidth(c.n, W, g, C), rounding), 'col-' + c.n, true));
+    });
+    var gr = roundValue(g, rounding);
+    rows.push({ group: 'Grid' });
+    rows.push(makeRow(data.base.gutter, gr, 'gutter', false));
+    rows.push(makeRow(data.base.gutterNegative, gr === 0 ? 0 : -gr, 'gutter-negative', false));
+    rows.push(makeRow(data.base.columns, C, 'columns', false));
+    rows.push(makeRow(data.base.margin, roundValue((P - W) / 2, rounding), 'margin', false));
+    return rows;
+  }
+
+  function render() {
+    if (!data) return;
+    var W = num('W'), g = num('g'), C = num('C'), P = num('P');
+    var err = validate(W, g, C, P);
+    var modeName = (data.modes.filter(function (m) { return m.modeId === data.modeId; })[0] || {}).name || '';
+
+    if (err) {
+      $('summary').innerHTML = '<span class="invalid">' + err + '</span>';
+      $('rows').innerHTML = '';
+      currentRows = [];
+      updateButton(modeName);
+      return;
+    }
+
+    var colW = (W - (C - 1) * g) / C;
+    var margin = (P - W) / 2;
+    $('summary').innerHTML =
+      '1 column <b>' + fmt(colW) + '</b> · margin <b>' + fmt(margin) + '</b>' +
+      (margin < 0 ? ' <span class="invalid">(col-12 is wider than the page)</span>' : '');
+
+    currentRows = computeRows(W, g, C, P);
+    $('rows').innerHTML = currentRows.map(function (r, i) {
+      if (r.group) return '<tr class="group"><td></td><td colspan="3">' + r.group + '</td></tr>';
+      var pills = '';
+      if (r.status === 'new') pills += '<span class="pill new">new</span>';
+      if (r.status === 'missing') pills += '<span class="pill">not found</span>';
+      if (r.isAlias) pills += '<span class="pill" title="Writing replaces the alias with a fixed value">alias</span>';
+      return '<tr class="' + r.status + '">' +
+        '<td><input type="checkbox" data-i="' + i + '"' + (r.checked ? ' checked' : '') + (r.enabled ? '' : ' disabled') + '></td>' +
+        '<td class="name" title="' + escapeHtml(r.name) + '">' + r.label + pills + '</td>' +
+        '<td class="num">' + fmt(r.current) + '</td>' +
+        '<td class="num next">' + (r.status === 'missing' ? '' : fmt(r.next)) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var enabled = currentRows.filter(function (r) { return r.enabled; });
+    var checked = enabled.filter(function (r) { return r.checked; });
+    $('all').disabled = enabled.length === 0;
+    $('all').checked = enabled.length > 0 && checked.length === enabled.length;
+    $('all').indeterminate = checked.length > 0 && checked.length < enabled.length;
+
+    updateButton(modeName);
+  }
+
+  function selectedItems() {
+    return currentRows.filter(function (r) { return r.enabled && r.checked; });
+  }
+
+  function updateButton(modeName) {
+    var count = selectedItems().length;
+    var btn = $('apply');
+    btn.disabled = busy || count === 0;
+    if (busy) btn.textContent = 'Updating…';
+    else if (count === 0) btn.textContent = 'No changes in ' + modeName;
+    else btn.textContent = 'Update ' + count + ' variable' + (count === 1 ? '' : 's') + ' in ' + modeName;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function showNotice(text) { $('notice').textContent = text; $('notice').hidden = !text; }
+
+  // ---------- events ----------
+  ['W', 'g', 'C', 'P'].forEach(function (id) { $(id).addEventListener('input', render); });
+
+  document.querySelectorAll('.segmented button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      rounding = b.getAttribute('data-r');
+      document.querySelectorAll('.segmented button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      render();
+    });
+  });
+
+  $('rows').addEventListener('change', function (e) {
+    var i = e.target.getAttribute('data-i');
+    if (i === null) return;
+    overrides[currentRows[i].name] = e.target.checked;
+    render();
+  });
+
+  $('all').addEventListener('change', function (e) {
+    currentRows.forEach(function (r) { if (r.enabled) overrides[r.name] = e.target.checked; });
+    render();
+  });
+
+  $('mode').addEventListener('change', function () {
+    post({ type: 'load', collectionId: data.collectionId, modeId: $('mode').value });
+  });
+  $('collection').addEventListener('change', function () {
+    post({ type: 'load', collectionId: $('collection').value, modeId: null });
+  });
+  $('reset').addEventListener('click', function () {
+    if (data) post({ type: 'load', collectionId: data.collectionId, modeId: data.modeId });
+  });
+
+  $('apply').addEventListener('click', function () {
+    var items = selectedItems().map(function (r) {
+      return { name: r.name, id: r.id, n: r.n, value: r.next };
+    });
+    if (!items.length) return;
+    busy = true;
+    updateButton('');
+    post({ type: 'apply', collectionId: data.collectionId, modeId: data.modeId, rounding: rounding, items: items });
+  });
+
+  window.onmessage = function (e) {
+    var msg = e.data && e.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === 'data') {
+      data = msg;
+      busy = false;
+      overrides = {};
+      showNotice('');
+      $('empty').hidden = true;
+      fillSelects();
+      fillInputs();
+      render();
+    } else if (msg.type === 'error') {
+      busy = false;
+      showNotice(msg.message);
+      if (!data) $('empty').hidden = true;
+      render();
+    }
+  };
+
+  $('empty').hidden = false;
+  post({ type: 'ready' });
+</script>
+</body>
+</html>
