@@ -684,6 +684,18 @@
     });
   });
 
+  // Arrow keys step by 1 (native); hold Shift to step by 10, like Figma.
+  document.querySelectorAll('.field input[type="number"]').forEach(function (el) {
+    el.addEventListener('keydown', function (e) {
+      if (!e.shiftKey || el.readOnly || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+      e.preventDefault();
+      var v = (parseFloat(el.value) || 0) + (e.key === 'ArrowUp' ? 10 : -10);
+      if (el.min !== '' && v < parseFloat(el.min)) v = parseFloat(el.min);
+      el.value = String(Math.round(v * 100) / 100);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
   // Split a linked margin from its alias, or link a plain margin to gutter.
   $('mLink').addEventListener('click', function (e) {
     e.preventDefault();
