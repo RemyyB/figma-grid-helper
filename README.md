@@ -25,7 +25,7 @@ Rounding: Floor (default; stacked spans never exceed col-12), Round (nearest px)
 
 ## Notes
 
-- Missing col-N variables (Desktop had no col-10 / col-11) are created. The mode you're editing gets the value from the table; other modes get a value calculated from their own col-12, gutter and columns. New variables copy col-12's scopes.
+- Missing col-N variables (Desktop had no col-10 / col-11) are created. The mode you're editing gets the value from the table; other modes get a value calculated from their own col-12, gutter and columns. New variables copy col-12's scopes and are created from col-12 down to col-1. Figma's plugin API can't move existing variables, so a new col-N is added at the end of the group; drag it into place once in the variables panel if the set already exists.
 - Aliased variables are never overwritten. They show `→ target` and follow their alias: if margin is an alias of gutter, changing gutter changes margin in the preview too.
 - When margin is aliased in a mode, it drives the container instead: `col-12 = page width − 2 × margin`. The col-12 field is then locked (`auto`).
 - An aliased col-12, gutter or columns locks its input; change the variable it points to instead.

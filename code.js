@@ -235,8 +235,12 @@ async function apply(msg) {
   var updated = 0;
   var created = 0;
 
-  for (var i = 0; i < msg.items.length; i++) {
-    var item = msg.items[i];
+  // Work from col-12 down to col-1, so new variables are created (and listed
+  // in the variables panel) in that order. Grid rows without n come last.
+  var items = msg.items.slice().sort(function (a, b) { return (b.n || 0) - (a.n || 0); });
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
     if (typeof item.value !== 'number' || !isFinite(item.value)) continue;
 
     if (item.id) {
